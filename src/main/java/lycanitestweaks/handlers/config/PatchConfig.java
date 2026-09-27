@@ -403,6 +403,15 @@ public class PatchConfig {
     @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patches.altarmainbosssoulcube.json")
     public boolean altarMainBossConsumeSoulcube = true;
 
+    @Config.Comment({
+            "Fix Rahovart and Amalgalich arenas not being block protected until the boss spawns.",
+            "The arena builder's walls use the default 30 block range instead of the boss's range, as Asmodeus's already do."
+    })
+    @Config.Name("Main Boss Altar Arena Protection")
+    @Config.RequiresMcRestart
+    @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patches.altarmainbossarenaprotection.json")
+    public boolean altarMainBossArenaProtection = true;
+
     @Config.Comment("Fix Altar spawned bosses being able to despawn when Variant despawning is enabled")
     @Config.Name("Mini Boss Altar Persistence")
     @Config.RequiresMcRestart
