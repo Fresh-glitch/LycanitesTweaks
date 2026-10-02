@@ -135,6 +135,7 @@ public class LycanitesTweaksPlayerCapability implements ILycanitesTweaksPlayerCa
     // Used only by client using Vanilla Lycanites packets
     @Override
     public void setKeyboundPet(PetEntry petEntry) {
+        if(this.keyboundPetEntry == petEntry) return;
         this.keyboundPetEntry = petEntry;
         this.sync();
     }
@@ -337,14 +338,9 @@ public class LycanitesTweaksPlayerCapability implements ILycanitesTweaksPlayerCa
     }
 
     private void syncSoulgazerToggle(){
-        PacketKeybindsSoulgazerToggle soulgazerToggle = new PacketKeybindsSoulgazerToggle(this);
-        if(this.player.getEntityWorld().isRemote) {
-            PacketHandler.instance.sendToServer(soulgazerToggle);
-        }
-        else {
-            EntityPlayerMP playerMP = (EntityPlayerMP) this.player;
-            PacketHandler.instance.sendTo(soulgazerToggle, playerMP);
-        }
+        // Server only, toggles are changed by the keybind packets
+        if(this.player.getEntityWorld().isRemote) return;
+        PacketHandler.instance.sendTo(new PacketKeybindsSoulgazerToggle(this), (EntityPlayerMP) this.player);
     }
 
     @Override
