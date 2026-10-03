@@ -122,6 +122,12 @@ public abstract class ItemWraithSigil_EnhancedMixin extends ItemScepter implemen
 
     @Unique
     @Override
+    public String lycanitesTweaks$getEntityVariantRarity(ItemStack itemStack) {
+        return this.getEntityVariantRarity(itemStack);
+    }
+
+    @Unique
+    @Override
     public void lycanitesTweaks$setCreatureTypeName(ItemStack itemStack, String type){
 
     }

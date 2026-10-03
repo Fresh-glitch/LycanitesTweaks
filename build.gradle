@@ -67,15 +67,15 @@ def optionalImplementation = [
         "curse.maven:bloodmoon-${bloodmoon_version}",
         "curse.maven:claimitapi-${claimitapi_version}",
         "curse.maven:collision-damage-${collisiondamage_version}",
-        "curse.maven:distinct-damage-descriptions-${ddd_version}",
+        "curse.maven:distinct-damage-descriptions-${ddd_version}", // TODO Look into why "mixin.ddd.json" cause crash indev. FB remove config for now.
         "curse.maven:electroblobs-wizardry-${ebw_version}",
         "curse.maven:in-control-${incontrol_version}",
         "curse.maven:jei-${jei_version}",
         "curse.maven:potioncore-${potioncore_version}",
-        // Disable the BetterCombat patches, they are removed indev
         "curse.maven:reachfix-${reachfix_version}",
         "curse.maven:rlcombat-${rlcombat_version}",
-        "curse.maven:rltweaker2-${rltweaker_version}",
+//        "curse.maven:rltweaker2-${rltweaker_version}",  // Disable the BetterCombat patches, they are removed indev
+        "libs:RLTweaker:1.12.2-0.7.5-indev", // I got tired of generating a config
         "curse.maven:shieldbreak-${shieldbreak_version}",
         "curse.maven:so-many-enchantments-${sme_version}",
         "curse.maven:scape-and-run-parasites-${srparasites_version}",
