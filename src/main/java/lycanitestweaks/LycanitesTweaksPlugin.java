@@ -14,12 +14,12 @@ import net.minecraftforge.fml.relauncher.CoreModManager;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.util.Files;
 
-import java.io.File;
 import java.net.URL;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @IFMLLoadingPlugin.MCVersion("1.12.2")
 public class LycanitesTweaksPlugin implements IFMLLoadingPlugin {
@@ -76,7 +76,12 @@ public class LycanitesTweaksPlugin implements IFMLLoadingPlugin {
 		if (Boolean.FALSE.equals(data.get("runtimeDeobfuscationEnabled"))) {
 			MixinEnvironment.getDefaultEnvironment().setObfuscationContext("searge");
 			// Mixin marks ForceLoadAsMod jars reparseable, which the classpath mod scan skips, so dependencies like DDD would not load as mods
-			Set<String> classpathJars = Launch.classLoader.getSources().stream().map(URL::getPath).map(path -> new File(path).getName()).collect(Collectors.toSet());
+			Set<String> classpathJars = new HashSet<>();
+			for (URL url : Launch.classLoader.getSources()) {
+				try {
+					classpathJars.add(Files.toFile(url).getName()); // same conversion as Mixin, so names with spaces match
+				} catch (Exception ignored) {}
+			}
 			CoreModManager.getReparseableCoremods().removeIf(classpathJars::contains);
 		}
 	}
