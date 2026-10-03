@@ -512,6 +512,10 @@ public class PatchConfig {
     @Config.Name("Fix Night Vision Curing Blindness")
     public boolean fixNVCuringBlindness = true;
 
+    @Config.Comment("Set the victim on fire when killed by Lycanites equipment with a burning hit effect, so it drops cooked loot like Fire Aspect.")
+    @Config.Name("Fix Equipment Burning Kills Dropping Raw Loot")
+    public boolean fixEquipmentBurningKill = true;
+
     @Config.Comment({
             "Fix various issues related to the pickup mechanic's range checks.",
             "1. Lycanites entity auto drop distance check applying an extra square root.",
