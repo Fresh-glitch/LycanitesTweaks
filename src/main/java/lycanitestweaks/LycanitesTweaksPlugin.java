@@ -9,14 +9,12 @@ import lycanitestweaks.handlers.config.IntegrationConfig;
 import lycanitestweaks.handlers.config.PatchConfig;
 import lycanitestweaks.handlers.config.major.CreatureStatsConfig;
 import lycanitestweaks.handlers.config.major.ItemTweaksConfig;
-import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.relauncher.CoreModManager;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.MixinEnvironment;
-import org.spongepowered.asm.util.Files;
 
-import java.net.URL;
+import java.io.File;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -77,10 +75,8 @@ public class LycanitesTweaksPlugin implements IFMLLoadingPlugin {
 			MixinEnvironment.getDefaultEnvironment().setObfuscationContext("searge");
 			// Mixin marks ForceLoadAsMod jars reparseable, which the classpath mod scan skips, so dependencies like DDD would not load as mods
 			Set<String> classpathJars = new HashSet<>();
-			for (URL url : Launch.classLoader.getSources()) {
-				try {
-					classpathJars.add(Files.toFile(url).getName()); // same conversion as Mixin, so names with spaces match
-				} catch (Exception ignored) {}
+			for (String path : System.getProperty("java.class.path").split(File.pathSeparator)) {
+				classpathJars.add(new File(path).getName()); // launch classpath only, mods folder coremods would load twice
 			}
 			CoreModManager.getReparseableCoremods().removeIf(classpathJars::contains);
 		}
