@@ -21,8 +21,6 @@ import java.util.Map;
 public class LycanitesTweaksPlugin implements IFMLLoadingPlugin {
 
 	public LycanitesTweaksPlugin() {
-		MixinBootstrap.init();
-
 		//		FermiumRegistryAPI.enqueueMixin(true, "mixins.lycanitestweaks.client.bigchildheadall.json"); // funny but clearly broken
 
 		// Always
