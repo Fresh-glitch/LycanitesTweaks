@@ -16,16 +16,20 @@ import lycanitestweaks.capability.playermoblevel.PlayerMobLevelCapability;
 import lycanitestweaks.entity.item.EntityEncounterSummonCrystal;
 import lycanitestweaks.handlers.ForgeConfigHandler;
 import lycanitestweaks.handlers.config.major.PlayerMobLevelsConfig;
+import lycanitestweaks.util.EquipmentUtil;
 import lycanitestweaks.util.Helpers;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.IEntityOwnable;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.DamageSource;
 import net.minecraft.util.math.Vec3d;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.EntityMountEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingDestroyBlockEvent;
 import net.minecraftforge.event.entity.living.LivingSetAttackTargetEvent;
 import net.minecraftforge.event.entity.living.LivingSpawnEvent;
@@ -64,6 +68,22 @@ public class EntityLivingHandler {
                 }
             }
         }
+    }
+
+    // Equipment applies burning in hitEntity, after the damage, so a killing blow drops loot before the victim is on fire
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onEquipmentBurningKill(LivingDeathEvent event) {
+        if(!ForgeConfigHandler.mixinPatchesConfig.fixEquipmentBurningKill) return;
+        EntityLivingBase victim = event.getEntityLiving();
+        if(victim.world.isRemote || victim.isBurning()) return;
+
+        // Melee only, RLCombat swaps an offhand weapon into the mainhand during the attack
+        DamageSource source = event.getSource();
+        if(!"player".equals(source.getDamageType()) || !(source.getTrueSource() instanceof EntityLivingBase) || source.getImmediateSource() != source.getTrueSource()) return;
+
+        ItemStack weapon = ((EntityLivingBase) source.getTrueSource()).getHeldItemMainhand();
+        int seconds = EquipmentUtil.getBurningSeconds(weapon);
+        if(seconds > 0) victim.setFire(seconds);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)

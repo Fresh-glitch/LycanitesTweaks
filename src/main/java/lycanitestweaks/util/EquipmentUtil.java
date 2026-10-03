@@ -80,6 +80,22 @@ public abstract class EquipmentUtil {
         return false;
     }
 
+    // Longest burning hit effect in seconds, 0 if none or dull
+    public static int getBurningSeconds(ItemStack itemStack){
+        if(!(itemStack.getItem() instanceof ItemEquipment)) return 0;
+
+        ItemEquipment lycanitesEquipment = (ItemEquipment)itemStack.getItem();
+        if(lycanitesEquipment.getSharpness(itemStack) <= 0) return 0;
+
+        int seconds = 0;
+        for(EquipmentFeature equipmentFeature : lycanitesEquipment.getFeaturesByType(itemStack, "effect")) {
+            EffectEquipmentFeature effectFeature = (EffectEquipmentFeature)equipmentFeature;
+            if("burning".equalsIgnoreCase(effectFeature.effectType) && !"self".equalsIgnoreCase(effectFeature.effectTarget))
+                seconds = Math.max(seconds, Math.round(effectFeature.effectDuration / 20.0F));
+        }
+        return seconds;
+    }
+
     // Performs hit effect without dealing damage
     public static void doEquipmentHitEffect(ItemStack itemStack, EntityLivingBase target, EntityLivingBase attacker){
         if(!(itemStack.getItem() instanceof ItemEquipment)) return;
