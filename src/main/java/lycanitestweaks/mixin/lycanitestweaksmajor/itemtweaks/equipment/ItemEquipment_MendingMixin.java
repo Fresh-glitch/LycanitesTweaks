@@ -18,6 +18,8 @@ public abstract class ItemEquipment_MendingMixin extends ItemBase {
     public abstract boolean addSharpness(ItemStack equipmentStack, int sharpness);
     @Shadow(remap = false)
     public abstract int getSharpness(ItemStack equipmentStack);
+    @Shadow(remap = false)
+    public abstract boolean removeSharpness(ItemStack equipmentStack, int sharpness);
 
     @Inject(
             method = "<init>",
@@ -45,6 +47,7 @@ public abstract class ItemEquipment_MendingMixin extends ItemBase {
     public void setDamage(ItemStack stack, int damage){
         int repair = this.getDamage(stack) - damage;
         if(repair > 0) this.addSharpness(stack, repair);
+        else if(repair < 0) this.removeSharpness(stack, -repair);
     }
 
     @Unique
