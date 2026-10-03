@@ -11,9 +11,7 @@ import lycanitestweaks.handlers.config.major.CreatureStatsConfig;
 import lycanitestweaks.handlers.config.major.ItemTweaksConfig;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.relauncher.CoreModManager;
-import net.minecraftforge.fml.relauncher.FMLLaunchHandler;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
-import org.apache.commons.lang3.StringUtils;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 
@@ -27,12 +25,6 @@ import java.util.stream.Collectors;
 public class LycanitesTweaksPlugin implements IFMLLoadingPlugin {
 
 	public LycanitesTweaksPlugin() {
-		// Indev, mixin adds ForceLoadAsMod dependencies on the classpath to the reparseable coremods, which the classpath mod scan skips
-		if(FMLLaunchHandler.isDeobfuscatedEnvironment()) {
-			Set<String> classpath = Launch.classLoader.getSources().stream().map(URL::getPath).map(path -> new File(path).getName()).collect(Collectors.toSet());
-			CoreModManager.getReparseableCoremods().removeIf(classpath::contains);
-		}
-
 		//		FermiumRegistryAPI.enqueueMixin(true, "mixins.lycanitestweaks.client.bigchildheadall.json"); // funny but clearly broken
 
 		// Always
@@ -83,7 +75,9 @@ public class LycanitesTweaksPlugin implements IFMLLoadingPlugin {
 		ForgeConfigProvider.pluginInit();
 		if (Boolean.FALSE.equals(data.get("runtimeDeobfuscationEnabled"))) {
 			MixinEnvironment.getDefaultEnvironment().setObfuscationContext("searge");
-			CoreModManager.getReparseableCoremods().removeIf(s -> StringUtils.containsIgnoreCase(s, "fermiumbooter"));
+			// Mixin marks ForceLoadAsMod jars reparseable, which the classpath mod scan skips, so dependencies like DDD would not load as mods
+			Set<String> classpathJars = Launch.classLoader.getSources().stream().map(URL::getPath).map(path -> new File(path).getName()).collect(Collectors.toSet());
+			CoreModManager.getReparseableCoremods().removeIf(classpathJars::contains);
 		}
 	}
 	
