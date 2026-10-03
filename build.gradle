@@ -67,7 +67,7 @@ def optionalImplementation = [
         "curse.maven:bloodmoon-${bloodmoon_version}",
         "curse.maven:claimitapi-${claimitapi_version}",
         "curse.maven:collision-damage-${collisiondamage_version}",
-        "curse.maven:distinct-damage-descriptions-${ddd_version}", // TODO Look into why "mixin.ddd.json" cause crash indev. FB remove config for now.
+        "curse.maven:distinct-damage-descriptions-${ddd_version}",
         "curse.maven:electroblobs-wizardry-${ebw_version}",
         "curse.maven:in-control-${incontrol_version}",
         "curse.maven:jei-${jei_version}",

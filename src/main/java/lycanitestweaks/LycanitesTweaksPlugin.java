@@ -9,18 +9,30 @@ import lycanitestweaks.handlers.config.IntegrationConfig;
 import lycanitestweaks.handlers.config.PatchConfig;
 import lycanitestweaks.handlers.config.major.CreatureStatsConfig;
 import lycanitestweaks.handlers.config.major.ItemTweaksConfig;
+import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.relauncher.CoreModManager;
+import net.minecraftforge.fml.relauncher.FMLLaunchHandler;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
 import org.apache.commons.lang3.StringUtils;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 
+import java.io.File;
+import java.net.URL;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @IFMLLoadingPlugin.MCVersion("1.12.2")
 public class LycanitesTweaksPlugin implements IFMLLoadingPlugin {
 
 	public LycanitesTweaksPlugin() {
+		// Indev, mixin adds ForceLoadAsMod dependencies on the classpath to the reparseable coremods, which the classpath mod scan skips
+		if(FMLLaunchHandler.isDeobfuscatedEnvironment()) {
+			Set<String> classpath = Launch.classLoader.getSources().stream().map(URL::getPath).map(path -> new File(path).getName()).collect(Collectors.toSet());
+			CoreModManager.getReparseableCoremods().removeIf(classpath::contains);
+		}
+
 		//		FermiumRegistryAPI.enqueueMixin(true, "mixins.lycanitestweaks.client.bigchildheadall.json"); // funny but clearly broken
 
 		// Always
