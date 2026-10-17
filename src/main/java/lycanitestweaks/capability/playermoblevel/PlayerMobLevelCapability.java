@@ -315,7 +315,9 @@ public class PlayerMobLevelCapability implements IPlayerMobLevelCapability {
             Enchantment ench = Enchantment.getEnchantmentByID(enchantments.getCompoundTagAt(i).getShort("id"));
             if(ench != null) {
                 int enchLvl = enchantments.getCompoundTagAt(i).getShort("lvl");
-                int enchantabilityLevels = (int)((ench.getMinEnchantability(ench.getMinLevel())) * ((float)enchLvl / ench.getMaxLevel()));
+                int enchantabilityLevels = ench.getMinEnchantability(Math.max(1, ench.getMinLevel()))
+                        * Math.round((float) enchLvl / Math.max(1, ench.getMaxLevel()));
+                // Enchantability * (level / maxLevel)
 
                 switch (ench.getRarity()){
                     case COMMON:
