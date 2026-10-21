@@ -1,10 +1,10 @@
 package lycanitestweaks.client.renderer.tile;
 
 import com.lycanitesmobs.client.model.ModelCustom;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
 import lycanitestweaks.client.LycanitesAssetReloader;
 import lycanitestweaks.client.model.item.ModelHellfireCannon;
 import lycanitestweaks.handlers.LycanitesTweaksRegistry;
-import lycanitestweaks.item.interfaces.IItemWithCreatureInfo;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.item.ItemStack;
@@ -40,9 +40,9 @@ public class RenderHellfireCannon extends ReloadableModelItemStackRenderer {
 
     @Override
     public ResourceLocation getStackTexture(ItemStack itemStack) {
-        if(itemStack.getItem() instanceof IItemWithCreatureInfo) {
-            IItemWithCreatureInfo item = (IItemWithCreatureInfo) itemStack.getItem();
-            switch (item.getEntityVariant(itemStack)) {
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
+        if(storedCreatureInfo != null) {
+            switch (storedCreatureInfo.getEntityVariant()) {
                 case 1: return LycanitesAssetReloader.RAHOVART_TEXTURE_1;
                 case 2: return LycanitesAssetReloader.RAHOVART_TEXTURE_2;
             }

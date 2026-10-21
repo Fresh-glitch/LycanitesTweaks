@@ -1,5 +1,7 @@
 package lycanitestweaks.item;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.lycanitesmobs.core.entity.ExtendedPlayer;
 import com.lycanitesmobs.core.info.CreatureInfo;
 import com.lycanitesmobs.core.info.CreatureManager;
@@ -7,10 +9,12 @@ import com.lycanitesmobs.core.info.ElementInfo;
 import com.lycanitesmobs.core.info.ItemConfig;
 import com.lycanitesmobs.core.item.ItemBase;
 import com.lycanitesmobs.core.pets.SummonSet;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
 import lycanitestweaks.capability.toggleableitem.IToggleableItem;
 import lycanitestweaks.capability.toggleableitem.ToggleableItem;
 import lycanitestweaks.handlers.ForgeConfigHandler;
 import lycanitestweaks.item.base.ItemPassive;
+import lycanitestweaks.item.interfaces.IItemWithCreatureInfo;
 import lycanitestweaks.mixin.vanilla.Entity_AccessorMixin;
 import lycanitestweaks.util.Helpers;
 import net.minecraft.client.Minecraft;
@@ -21,7 +25,6 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.IItemPropertyGetter;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.ActionResult;
@@ -30,32 +33,26 @@ import net.minecraft.util.EnumHand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.World;
-import net.minecraftforge.event.world.WorldEvent;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.registry.GameRegistry;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
-public class ItemVileMatter extends ItemPassive  {
+public class ItemVileMatter extends ItemPassive implements IItemWithCreatureInfo {
 
-    public static final String VILE_MATTER_UUID_NBT = "VileMatterUUID";
-    private static final String NBT_CREATURE_TYPE_NAME = "creatureTypeName";
-    private static final String NBT_CREATURE_SUBSPECIES = "Subspecies";
+    private static final Cache<ItemStoredCreatureInfo, Status> STATUS_CACHE = CacheBuilder.newBuilder()
+            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .build();
 
-    private final static Map<UUID, Collection<ElementInfo>> STACK_ELEMENTS = new HashMap<>();
-    private final static Map<UUID, Collection<Potion>> STACK_POTIONS = new HashMap<>();
-    private final static Set<UUID> STACK_BURNING = new HashSet<>();
+    private static class Status {
+        public boolean burning = false;
+        public final Collection<ElementInfo> ELEMENTS = new ArrayList<>();
+        public final Collection<Potion> POTIONS = new ArrayList<>();
+    }
 
     public ItemVileMatter(String name) {
         super(name);
@@ -92,10 +89,15 @@ public class ItemVileMatter extends ItemPassive  {
         super.addInformation(itemStack, world, tooltip, tooltipFlag);
 
         boolean beastiary = ForgeConfigHandler.clientFeaturesMixinConfig.beastiaryGUILT;
-        String storedCreature = this.getCreatureTypeName(itemStack);
+        String storedCreature = "";
         StringBuilder rawStrings = new StringBuilder();
         rawStrings.append(I18n.format("item.lycanitestweaks.vilematter.description"));
         rawStrings.append("\n").append(I18n.format("lycanitestweaks.ability.vileaura.tooltip0"));
+
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
+        if(storedCreatureInfo != null) {
+            storedCreature = storedCreatureInfo.getCreatureTypeName();
+        }
 
         if(CreatureManager.getInstance().getCreature(storedCreature) != null) {
             storedCreature = CreatureManager.getInstance().getCreature(storedCreature).getTitle();
@@ -139,30 +141,39 @@ public class ItemVileMatter extends ItemPassive  {
     public void tickAbility(ItemStack stack, EntityLivingBase entity) {
         super.tickAbility(stack, entity);
         if (entity.world.isRemote) return;
-        if (this.getCreatureTypeName(stack).isEmpty()) return;
 
         // Tick Rate
         if(entity.ticksExisted % ForgeConfigHandler.server.customStaffConfig.vileAuraTickRate != 0) {
             return;
         }
 
-        // Load NBT debuffs
-        if(!STACK_ELEMENTS.containsKey(getUUID(stack))) {
-            CreatureInfo creatureInfo = CreatureManager.getInstance().getCreature(this.getCreatureTypeName(stack));
-            if (creatureInfo != null) {
-                int subspecies = this.getEntitySubspecies(stack);
-                List<ElementInfo> elementInfos = (subspecies == 0)
-                        ? creatureInfo.elements
-                        : creatureInfo.getSubspecies(subspecies).elements;
-                this.setDebuffs(elementInfos, stack);
-            }
-        }
-        Collection<ElementInfo> elementInfos = STACK_ELEMENTS.get(getUUID(stack));
-        if(elementInfos == null || elementInfos.isEmpty()) return;
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(stack);
+        if(storedCreatureInfo == null) return;
 
         // Check toggle
         IToggleableItem toggleableItem = ToggleableItem.getForItemStack(stack);
-        if(toggleableItem == null || !toggleableItem.isAbilityToggled()) return;
+        if(toggleableItem == null) return;
+        if(!toggleableItem.isAbilityToggled()) {
+            STATUS_CACHE.invalidate(storedCreatureInfo);
+            return;
+        }
+
+        Status status = STATUS_CACHE.getIfPresent(storedCreatureInfo);
+        if(status == null) {
+            CreatureInfo creatureInfo = CreatureManager.getInstance().getCreature(storedCreatureInfo.getCreatureTypeName());
+            if (creatureInfo != null) {
+                int subspecies = storedCreatureInfo.getEntitySubspecies();
+                List<ElementInfo> elementInfos = (subspecies == 0)
+                        ? creatureInfo.elements
+                        : creatureInfo.getSubspecies(subspecies).elements;
+                this.setDebuffs(elementInfos, storedCreatureInfo);
+                status = STATUS_CACHE.getIfPresent(storedCreatureInfo);
+            }
+        }
+
+        if(status == null) return;
+
+        if(status.ELEMENTS.isEmpty()) return;
 
         // Get Range
         double range = entity instanceof EntityPlayer
@@ -175,12 +186,12 @@ public class ItemVileMatter extends ItemPassive  {
         );
 
         // Spread Burning
-        if (STACK_BURNING.contains(getUUID(stack)) && entity.isBurning() && entity instanceof Entity_AccessorMixin) {
+        if (status.burning && entity.isBurning() && entity instanceof Entity_AccessorMixin) {
             aoeTargets.forEach(entityLivingBase -> entityLivingBase.setFire(((Entity_AccessorMixin) entity).lycanitesTweaks$getFireTicks() / 20));
         }
 
         // Spread Debuffs
-        STACK_POTIONS.getOrDefault(getUUID(stack), Collections.emptyList()).stream().filter(entity::isPotionActive).forEach(potion -> {
+        status.POTIONS.stream().filter(entity::isPotionActive).forEach(potion -> {
             PotionEffect potionEffect = entity.getActivePotionEffect(potion);
             aoeTargets.forEach(target -> {
                 // Try not to reset cycle dependent potions
@@ -190,7 +201,7 @@ public class ItemVileMatter extends ItemPassive  {
         });
 
         // Self Debuff
-        elementInfos.forEach(elementInfo ->
+        status.ELEMENTS.forEach(elementInfo ->
                 elementInfo.debuffEntity(entity, 20 * ForgeConfigHandler.server.customStaffConfig.vileAuraDuration, 0));
     }
 
@@ -216,71 +227,64 @@ public class ItemVileMatter extends ItemPassive  {
         return new ActionResult(EnumActionResult.SUCCESS, itemStack);
     }
 
-    @Nullable
-    private UUID getUUID(ItemStack stack) {
-        NBTTagCompound nbt = stack.getTagCompound();
-        UUID uuid = null;
+    private void setDebuffs(Collection<ElementInfo> elementInfos, ItemStoredCreatureInfo storedCreatureInfo) {
+        if(storedCreatureInfo == null) return;
 
-        if(nbt != null) {
-            if(nbt.hasUniqueId(VILE_MATTER_UUID_NBT)) {
-                uuid = nbt.getUniqueId(VILE_MATTER_UUID_NBT);
-            }
-            else {
-                uuid = UUID.randomUUID();
-                nbt.setUniqueId(VILE_MATTER_UUID_NBT, uuid);
-                stack.setTagCompound(nbt);
+        Status status = STATUS_CACHE.getIfPresent(storedCreatureInfo);
+        if(status == null) {
+            status = new Status();
+            STATUS_CACHE.put(storedCreatureInfo, status);
+        }
+
+        status.ELEMENTS.clear();
+        status.ELEMENTS.addAll(elementInfos);
+
+        status.burning = false;
+        status.POTIONS.clear();
+        for(ElementInfo elementInfo : elementInfos) {
+            for(String debuff : elementInfo.debuffs) {
+                if(debuff.equalsIgnoreCase("burning")) {
+                    status.burning = true;
+                }
+                else {
+                    Potion potion = GameRegistry.findRegistry(Potion.class).getValue(new ResourceLocation(debuff));
+                    if (potion != null && !status.POTIONS.contains(potion)) status.POTIONS.add(potion);
+                }
             }
         }
-        return uuid;
-    }
-
-    private void clearDebuffs() {
-        STACK_ELEMENTS.clear();
-        STACK_POTIONS.clear();
-        STACK_BURNING.clear();
-    }
-
-    private void setDebuffs(Collection<ElementInfo> elementInfos, ItemStack itemStack) {
-        STACK_ELEMENTS.put(getUUID(itemStack), elementInfos);
-        List<Potion> potions = new ArrayList<>();
-        elementInfos.forEach(elementInfo -> elementInfo.debuffs.forEach(debuff -> {
-            if(debuff.equalsIgnoreCase("burning")) {
-                STACK_BURNING.add(getUUID(itemStack));
-            }
-            else {
-                Potion potion = GameRegistry.findRegistry(Potion.class).getValue(new ResourceLocation(debuff));
-                if (potion != null && !potions.contains(potion)) potions.add(potion);
-            }
-        }));
-        STACK_POTIONS.put(getUUID(itemStack), potions);
     }
 
     private void setDebuffsFromPlayer(EntityPlayer player, ItemStack itemStack) {
         ExtendedPlayer playerExt = ExtendedPlayer.getForPlayer(player);
         if (playerExt != null) {
-            CreatureInfo creatureInfo = playerExt.selectedCreature;
             String title = "";
-            String storedCreatureType = this.getCreatureTypeName(itemStack);
-            if(creatureInfo != null) {
-                if((creatureInfo.isTameable() || creatureInfo.isSummonable() || player.isCreative())
-                        && playerExt.getBeastiary().hasKnowledgeRank(creatureInfo.getName(), 2)) {
-                    List<ElementInfo> elementInfos = (playerExt.selectedSubspecies == 0)
-                            ? creatureInfo.elements
-                            : creatureInfo.getSubspecies(playerExt.selectedSubspecies).elements;
-                    this.setDebuffs(elementInfos, itemStack);
-                    this.setStoredCreature(itemStack, creatureInfo.getName(), playerExt.selectedSubspecies);
-                    title = creatureInfo.getTitle();
+            ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
+            if(storedCreatureInfo != null) {
+                CreatureInfo creatureInfo = playerExt.selectedCreature;
+                if(creatureInfo != null) {
+                    if((creatureInfo.isTameable() || creatureInfo.isSummonable() || player.isCreative())
+                            && playerExt.getBeastiary().hasKnowledgeRank(creatureInfo.getName(), 2)) {
+                        List<ElementInfo> elementInfos = (playerExt.selectedSubspecies == 0)
+                                ? creatureInfo.elements
+                                : creatureInfo.getSubspecies(playerExt.selectedSubspecies).elements;
+                        this.setDebuffs(elementInfos, storedCreatureInfo);
+                        storedCreatureInfo.setCreatureTypeName(creatureInfo.getName());
+                        storedCreatureInfo.setEntitySubspecies(playerExt.selectedSubspecies);
+                        title = creatureInfo.getTitle();
+                    }
                 }
-            }
 
-            // Fallback if Client doesn't update Server
-            if(storedCreatureType.isEmpty()) {
-                SummonSet summonSet = playerExt.getSelectedSummonSet();
-                creatureInfo = summonSet.getCreatureInfo();
-                if (summonSet.isUseable() && !summonSet.summonType.equals(storedCreatureType)) {
-                    this.setDebuffs(summonSet.getCreatureInfo().elements, itemStack);
-                    this.setStoredCreature(itemStack, summonSet.summonType, summonSet.subspecies);
-                    title = creatureInfo.getTitle();
+                // Fallback if Client doesn't update Server
+                String storedCreatureType = storedCreatureInfo.getCreatureTypeName();
+                if(storedCreatureType.isEmpty()) {
+                    SummonSet summonSet = playerExt.getSelectedSummonSet();
+                    creatureInfo = summonSet.getCreatureInfo();
+                    if (summonSet.isUseable() && !summonSet.summonType.equals(storedCreatureType)) {
+                        this.setDebuffs(summonSet.getCreatureInfo().elements, storedCreatureInfo);
+                        storedCreatureInfo.setCreatureTypeName(summonSet.summonType);
+                        storedCreatureInfo.setEntitySubspecies(summonSet.subspecies);
+                        title = creatureInfo.getTitle();
+                    }
                 }
             }
 
@@ -291,24 +295,5 @@ public class ItemVileMatter extends ItemPassive  {
                 player.sendStatusMessage(new TextComponentTranslation("message.passiveability.vileaura.linkset", title), true);
             }
         }
-    }
-
-    public void setStoredCreature(ItemStack itemStack, String creatureType, int subspecies) {
-        this.setTagString(itemStack, NBT_CREATURE_TYPE_NAME, creatureType);
-        this.setTagInt(itemStack, NBT_CREATURE_SUBSPECIES, subspecies);
-    }
-
-    public String getCreatureTypeName(ItemStack itemStack){
-        return this.getTagString(itemStack, NBT_CREATURE_TYPE_NAME);
-    }
-
-    public int getEntitySubspecies(ItemStack itemStack){
-        return this.getTagInt(itemStack, NBT_CREATURE_SUBSPECIES);
-    }
-
-    // Client and Server
-    @SubscribeEvent
-    public void onWorldUnload(WorldEvent.Unload event) {
-        clearDebuffs();
     }
 }

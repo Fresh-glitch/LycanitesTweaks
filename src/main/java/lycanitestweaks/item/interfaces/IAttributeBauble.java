@@ -2,11 +2,17 @@ package lycanitestweaks.item.interfaces;
 
 import baubles.api.BaubleType;
 import baubles.api.IBauble;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import com.lycanitesmobs.core.entity.BaseCreatureEntity;
+import lycanitestweaks.LycanitesTweaks;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
 import lycanitestweaks.compat.BaublesHandler;
 import lycanitestweaks.compat.ModLoadedUtil;
+import lycanitestweaks.handlers.features.entity.AttributesHandler;
 import lycanitestweaks.handlers.features.item.ConfigurableItemHandler;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
@@ -15,8 +21,7 @@ import net.minecraftforge.fml.common.Optional;
 @Optional.Interface(iface = "baubles.api.IBauble", modid = ModLoadedUtil.BAUBLES_MODID, striprefs = true)
 public interface IAttributeBauble extends IBauble {
 
-    // TODO make more unique in next version
-    String BAUBLE_MODIFIER_NAME = "Bauble modifier";
+    String BAUBLE_MODIFIER_NAME = LycanitesTweaks.MODID + ".baubleModifier";
 
     // Above bounds = All Slots
     // Below bounds = Not a bauble
@@ -35,12 +40,18 @@ public interface IAttributeBauble extends IBauble {
         if (player.world.isRemote) return;
 
         if(player instanceof EntityPlayer) {
-            ConfigurableItemHandler.ItemStats stats = ConfigurableItemHandler.getItemStats(itemstack);
-            ConfigurableItemHandler.EquipmentSlot slots = ConfigurableItemHandler.getItemSlot(itemstack);
-            if(slots != null && stats != null && slots.baubleAttributes) {
-                Multimap<String, AttributeModifier> multimap = ConfigurableItemHandler.getBaubleAttributeModifiers(stats, BAUBLE_MODIFIER_NAME);
-                player.getAttributeMap().applyAttributeModifiers(multimap);
+            ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemstack);
+            if(storedCreatureInfo != null) {
+                ConfigurableItemHandler.EquipmentSlot slots = ConfigurableItemHandler.getItemSlot(itemstack);
+                if(slots != null && slots.baubleAttributes) {
+                    Multimap<String, AttributeModifier> multimap = ConfigurableItemHandler.getBaubleAttributeModifiers(storedCreatureInfo, BAUBLE_MODIFIER_NAME);
+                    player.getAttributeMap().applyAttributeModifiers(multimap);
+                }
             }
+        }
+
+        if(player.getHealth() > player.getMaxHealth()) {
+            player.setHealth(player.getMaxHealth());
         }
     }
 
@@ -50,12 +61,16 @@ public interface IAttributeBauble extends IBauble {
         if (player.world.isRemote) return;
 
         if(player instanceof EntityPlayer) {
-            ConfigurableItemHandler.ItemStats stats = ConfigurableItemHandler.getItemStats(itemstack);
+            ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemstack);
             ConfigurableItemHandler.EquipmentSlot slots = ConfigurableItemHandler.getItemSlot(itemstack);
-            if(slots != null && stats != null) {
-                Multimap<String, AttributeModifier> multimap = ConfigurableItemHandler.getBaubleAttributeModifiers(stats, BAUBLE_MODIFIER_NAME);
+            if(slots != null) {
+                Multimap<String, AttributeModifier> multimap = ConfigurableItemHandler.getBaubleAttributeModifiers(storedCreatureInfo, BAUBLE_MODIFIER_NAME);
                 player.getAttributeMap().removeAttributeModifiers(multimap);
             }
+        }
+
+        if(player.getHealth() > player.getMaxHealth()) {
+            player.setHealth(player.getMaxHealth());
         }
     }
 

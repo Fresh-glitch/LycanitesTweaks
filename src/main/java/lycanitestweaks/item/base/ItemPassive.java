@@ -2,8 +2,7 @@ package lycanitestweaks.item.base;
 
 import com.google.common.collect.Multimap;
 import lycanitestweaks.LycanitesTweaks;
-import lycanitestweaks.capability.toggleableitem.ToggleableItem;
-import lycanitestweaks.capability.toggleableitem.ToggleableItemHandler;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
 import lycanitestweaks.compat.ModLoadedUtil;
 import lycanitestweaks.handlers.features.item.ConfigurableItemHandler;
 import lycanitestweaks.item.interfaces.IAttributeBauble;
@@ -13,12 +12,8 @@ import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.common.Optional;
-
-import javax.annotation.Nullable;
 
 public abstract class ItemPassive extends ItemBase implements IAttributeBauble {
 
@@ -48,8 +43,9 @@ public abstract class ItemPassive extends ItemBase implements IAttributeBauble {
     public Multimap<String, AttributeModifier> getAttributeModifiers(EntityEquipmentSlot slot, ItemStack stack) {
         Multimap<String, AttributeModifier> multimap = super.getAttributeModifiers(slot, stack);
 
-        ConfigurableItemHandler.ItemStats stats = ConfigurableItemHandler.getItemStats(stack);
-        if (stats != null) {
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(stack);
+        if(storedCreatureInfo != null) {
+            ConfigurableItemHandler.ItemStats stats = storedCreatureInfo.getOrCreateStats();
             String modifierName = "Item modifier";
             if (slot == this.getEquipmentSlot(stack)) {
                 if(slot == EntityEquipmentSlot.MAINHAND) {
@@ -87,36 +83,5 @@ public abstract class ItemPassive extends ItemBase implements IAttributeBauble {
     @Optional.Method(modid = ModLoadedUtil.BAUBLES_MODID)
     public void onWornTick(ItemStack itemStack, EntityLivingBase player) {
         this.tickAbility(itemStack, player);
-    }
-
-    @Override
-    @Nullable
-    public NBTTagCompound getNBTShareTag(ItemStack stack) {
-        NBTTagCompound nbt = super.getNBTShareTag(stack);
-        if(nbt != null) {
-            ToggleableItem toggleableItem = ToggleableItem.getForItemStack(stack);
-            if (toggleableItem != null) {
-                NBTBase capTag = ToggleableItemHandler.TOGGLE_ITEM.writeNBT(toggleableItem, null);
-                if (capTag != null) {
-                    NBTTagCompound newTag = nbt.copy();
-                    newTag.setTag(TOGGLE_CAP, capTag);
-                    return newTag;
-                }
-            }
-        }
-        return nbt;
-    }
-
-    @Override
-    public void readNBTShareTag(ItemStack stack, @Nullable NBTTagCompound nbt) {
-        if(nbt != null && nbt.hasKey(TOGGLE_CAP)) {
-            NBTTagCompound capTag = nbt.getCompoundTag(TOGGLE_CAP);
-            ToggleableItem toggleableItem = ToggleableItem.getForItemStack(stack);
-            if(toggleableItem != null) {
-                ToggleableItemHandler.TOGGLE_ITEM.readNBT(toggleableItem, null, capTag);
-                nbt.removeTag(TOGGLE_CAP);
-            }
-        }
-        super.readNBTShareTag(stack, nbt);
     }
 }

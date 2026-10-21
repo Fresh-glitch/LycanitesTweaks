@@ -1,13 +1,12 @@
 package lycanitestweaks.client.renderer.tile;
 
 import com.lycanitesmobs.client.model.ModelCustom;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
 import lycanitestweaks.capability.toggleableitem.IToggleableItem;
 import lycanitestweaks.capability.toggleableitem.ToggleableItem;
 import lycanitestweaks.client.LycanitesAssetReloader;
 import lycanitestweaks.client.model.item.ModelHellShield;
 import lycanitestweaks.client.renderer.RenderContext;
-import lycanitestweaks.item.ItemHellShield;
-import lycanitestweaks.item.interfaces.IItemWithCreatureInfo;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.item.ItemStack;
@@ -27,59 +26,59 @@ public class RenderHellShield extends ReloadableModelItemStackRenderer {
     @Override
     public void renderByItem(ItemStack itemStackIn, float partialTicks) {
         if(itemStackIn != RenderContext.currentRenderStack) return;
-        if(itemStackIn.getItem() instanceof ItemHellShield) {
-            ItemHellShield hellShield = (ItemHellShield) itemStackIn.getItem();
-            EntityLivingBase entityLivingBase = RenderContext.currentRenderEntity;;
+        EntityLivingBase entityLivingBase = RenderContext.currentRenderEntity;;
 
-            if(this.objModel != null) {
-                IToggleableItem toggleableItem = ToggleableItem.getForItemStack(itemStackIn);
-                if(toggleableItem != null) {
-                    if(toggleableItem.isAbilityToggled()) {
-                        this.objModel.setShieldVariant(hellShield.getEntityVariant(itemStackIn));
-                        this.objModel.setShieldActive(true);
+        if(this.objModel != null) {
+            IToggleableItem toggleableItem = ToggleableItem.getForItemStack(itemStackIn);
+            if(toggleableItem != null) {
+                if(toggleableItem.isAbilityToggled()) {
+                    ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStackIn);
+                    if(storedCreatureInfo != null) {
+                        this.objModel.setShieldVariant(storedCreatureInfo.getEntityVariant());
                     }
-                    else {
-                        this.objModel.setShieldActive(false);
-                    }
+                    this.objModel.setShieldActive(true);
                 }
                 else {
                     this.objModel.setShieldActive(false);
                 }
             }
-
-            this.bindItemTexture(this.getStackTexture(itemStackIn));
-            if(entityLivingBase != null) {
-                this.renderInHand(
-                        entityLivingBase,
-                        entityLivingBase.limbSwing,
-                        entityLivingBase.limbSwingAmount,
-                        partialTicks,
-                        entityLivingBase.ticksExisted,
-                        0F,
-                        0F,
-                        0.0625F
-                );
-            }
             else {
-                this.renderInHand(
-                        null,
-                        Minecraft.getMinecraft().player.limbSwing,
-                        Minecraft.getMinecraft().player.limbSwingAmount,
-                        partialTicks,
-                        Minecraft.getMinecraft().player.ticksExisted,
-                        0F,
-                        0F,
-                        0.0625F
-                );
+                this.objModel.setShieldActive(false);
             }
+        }
+
+        this.bindItemTexture(this.getStackTexture(itemStackIn));
+        if(entityLivingBase != null) {
+            this.renderInHand(
+                    entityLivingBase,
+                    entityLivingBase.limbSwing,
+                    entityLivingBase.limbSwingAmount,
+                    partialTicks,
+                    entityLivingBase.ticksExisted,
+                    0F,
+                    0F,
+                    0.0625F
+            );
+        }
+        else {
+            this.renderInHand(
+                    null,
+                    Minecraft.getMinecraft().player.limbSwing,
+                    Minecraft.getMinecraft().player.limbSwingAmount,
+                    partialTicks,
+                    Minecraft.getMinecraft().player.ticksExisted,
+                    0F,
+                    0F,
+                    0.0625F
+            );
         }
     }
 
     @Override
     public ResourceLocation getStackTexture(ItemStack itemStack) {
-        if(itemStack.getItem() instanceof IItemWithCreatureInfo) {
-            IItemWithCreatureInfo item = (IItemWithCreatureInfo) itemStack.getItem();
-            switch (item.getEntityVariant(itemStack)) {
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
+        if(storedCreatureInfo != null) {
+            switch (storedCreatureInfo.getEntityVariant()) {
                 case 1: return LycanitesAssetReloader.ASMODEUS_TEXTURE_1;
                 case 2: return LycanitesAssetReloader.ASMODEUS_TEXTURE_2;
             }

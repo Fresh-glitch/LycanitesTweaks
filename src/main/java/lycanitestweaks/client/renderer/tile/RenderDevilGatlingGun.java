@@ -1,11 +1,11 @@
 package lycanitestweaks.client.renderer.tile;
 
 import com.lycanitesmobs.client.model.ModelCustom;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
 import lycanitestweaks.client.LycanitesAssetReloader;
 import lycanitestweaks.client.model.item.ModelDevilGatlingGun;
 import lycanitestweaks.client.renderer.RenderContext;
 import lycanitestweaks.handlers.LycanitesTweaksRegistry;
-import lycanitestweaks.item.interfaces.IItemWithCreatureInfo;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.item.ItemStack;
@@ -53,38 +53,14 @@ public class RenderDevilGatlingGun extends ReloadableModelItemStackRenderer {
                         0.0625F
                 );
             }
-//            if(entityLivingBase == null) {
-//                this.renderInHand(
-//                        Minecraft.getMinecraft().player,
-//                        Minecraft.getMinecraft().player.limbSwing,
-//                        Minecraft.getMinecraft().player.limbSwingAmount,
-//                        partialTicks,
-//                        Minecraft.getMinecraft().player.ticksExisted,
-//                        0F,
-//                        0F,
-//                        0.0625F
-//                );
-//            }
-//            else {
-//                this.renderInHand(
-//                        entityLivingBase,
-//                        entityLivingBase.limbSwing,
-//                        entityLivingBase.limbSwingAmount,
-//                        partialTicks,
-//                        entityLivingBase.ticksExisted,
-//                        0F,
-//                        0F,
-//                        0.0625F
-//                );
-//            }
         }
     }
 
     @Override
     public ResourceLocation getStackTexture(ItemStack itemStack) {
-        if(itemStack.getItem() instanceof IItemWithCreatureInfo) {
-            IItemWithCreatureInfo item = (IItemWithCreatureInfo) itemStack.getItem();
-            switch (item.getEntityVariant(itemStack)) {
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
+        if(storedCreatureInfo != null) {
+            switch (storedCreatureInfo.getEntityVariant()) {
                 case 1: return LycanitesAssetReloader.ASMODEUS_TEXTURE_1;
                 case 2: return LycanitesAssetReloader.ASMODEUS_TEXTURE_2;
             }

@@ -20,6 +20,9 @@ import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class BaublesHandler {
 
     public static boolean hasSoulgazerBauble(EntityPlayer player){
@@ -45,6 +48,19 @@ public class BaublesHandler {
         }
 
         return count;
+    }
+
+    public static List<ItemStack> getAttributeBaubles(EntityPlayer player) {
+        List<ItemStack> list = new ArrayList<>();
+        IBaublesItemHandler baubleItems = BaublesApi.getBaublesHandler(player);
+        if(baubleItems != null) {
+            for (int i = 0; i < baubleItems.getSlots(); i++) {
+                ItemStack bauble = baubleItems.getStackInSlot(i);
+                if(bauble.getItem() instanceof IAttributeBauble)
+                    list.add(bauble);
+            }
+        }
+        return list;
     }
 
     // Order should be (Keybind) -> Server -> Sync -> Client

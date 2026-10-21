@@ -11,6 +11,7 @@ import com.lycanitesmobs.core.info.CreatureManager;
 import com.lycanitesmobs.core.info.Variant;
 import com.lycanitesmobs.core.item.ItemBase;
 import lycanitestweaks.LycanitesTweaks;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
 import lycanitestweaks.compat.ModLoadedUtil;
 import lycanitestweaks.entity.projectile.EntityChargeArrow;
 import lycanitestweaks.handlers.ForgeConfigHandler;
@@ -57,14 +58,18 @@ public class ItemHellfireCannon extends ItemBossRangedWeapon {
         StringBuilder rawStrings = new StringBuilder();
         rawStrings.append(I18n.format("item.lycanitestweaks.hellfirecannon.description"));
 
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
         CreatureInfo creatureInfo = CreatureManager.getInstance().getCreature("rahovart");
-        if(creatureInfo != null && this.getLevel(itemStack) > 0) {
-            rawStrings.append("\n");
-            Variant variant = creatureInfo.getSubspecies(0).getVariant(this.getEntityVariant(itemStack));
-            if (variant != null) rawStrings.append(variant.getTitle()).append(" ");
+        if(storedCreatureInfo != null && creatureInfo != null) {
+            int level = storedCreatureInfo.getLevel();
+            if(level > 0) {
+                rawStrings.append("\n");
+                Variant variant = creatureInfo.getSubspecies(0).getVariant(storedCreatureInfo.getEntityVariant());
+                if (variant != null) rawStrings.append(variant.getTitle()).append(" ");
 
-            rawStrings.append(creatureInfo.getTitle()).append(" ");
-            rawStrings.append(I18n.format("entity.level")).append(" ").append(this.getLevel(itemStack));
+                rawStrings.append(creatureInfo.getTitle()).append(" ");
+                rawStrings.append(I18n.format("entity.level")).append(" ").append(level);
+            }
         }
 
         rawStrings.append("\n");
@@ -83,8 +88,8 @@ public class ItemHellfireCannon extends ItemBossRangedWeapon {
             rawStrings.append("\n").append(I18n.format("item.lycanitestweaks.tooltip.expand", "SHIFT"));
         }
 
-        ConfigurableItemHandler.ItemStats stats = ConfigurableItemHandler.getItemStats(itemStack);
-        if(stats != null) {
+        if(storedCreatureInfo != null) {
+            ConfigurableItemHandler.ItemStats stats = storedCreatureInfo.getOrCreateStats();
             rawStrings.append("\n");
             rawStrings.append(I18n.format("item.stats.ticksperuse.weapon.tooltip", stats.ticksPerUse / 20F));
         }
@@ -104,8 +109,9 @@ public class ItemHellfireCannon extends ItemBossRangedWeapon {
         int useTime = this.getMaxItemUseDuration(stack) - timeLeft;
 
         int useRate = 200;
-        ConfigurableItemHandler.ItemStats stats = ConfigurableItemHandler.getItemStats(stack);
-        if(stats != null) {
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(stack);
+        if(storedCreatureInfo != null) {
+            ConfigurableItemHandler.ItemStats stats = storedCreatureInfo.getOrCreateStats();
             useRate = stats.ticksPerUse;
         }
         if(useTime < useRate) return;
@@ -124,8 +130,9 @@ public class ItemHellfireCannon extends ItemBossRangedWeapon {
             if (LycanitesTweaks.PROXY.getClientPlayer() == player) {
                 int useTime = this.getMaxItemUseDuration(stack) - count;
                 int useRate = 200;
-                ConfigurableItemHandler.ItemStats stats = ConfigurableItemHandler.getItemStats(stack);
-                if(stats != null) {
+                ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(stack);
+                if(storedCreatureInfo != null) {
+                    ConfigurableItemHandler.ItemStats stats = storedCreatureInfo.getOrCreateStats();
                     useRate = stats.ticksPerUse;
                 }
                 int percent = 100 * useTime / useRate;
@@ -212,8 +219,9 @@ public class ItemHellfireCannon extends ItemBossRangedWeapon {
         if(event.getItem().getItem() instanceof ItemHellfireCannon) {
             int useTime = event.getItem().getMaxItemUseDuration() - event.getDuration();
             int useRate = 200;
-            ConfigurableItemHandler.ItemStats stats = ConfigurableItemHandler.getItemStats(event.getItem());
-            if(stats != null) {
+            ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(event.getItem());
+            if(storedCreatureInfo != null) {
+                ConfigurableItemHandler.ItemStats stats = storedCreatureInfo.getOrCreateStats();
                 useRate = stats.ticksPerUse;
             }
             if(useTime >= useRate && useTime <= useRate + 20) {

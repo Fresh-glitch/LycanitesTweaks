@@ -7,12 +7,16 @@ import com.lycanitesmobs.core.info.CreatureInfo;
 import com.lycanitesmobs.core.info.CreatureManager;
 import com.lycanitesmobs.core.item.temp.ItemStaffSummoning;
 import lycanitestweaks.LycanitesTweaks;
+import lycanitestweaks.capability.storedcreatureinfo.IStoredCreatureInfo;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
+import lycanitestweaks.capability.storedcreatureinfo.StoredCreatureInfoHandler;
 import lycanitestweaks.item.interfaces.IItemWithCreatureInfo;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.EnumActionResult;
@@ -23,11 +27,13 @@ import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class ItemCreatureInfoStaff extends ItemStaffSummoning implements IItemWithCreatureInfo {
 
-    protected ItemStack itemStack = null;
+    // Used to pass to Vanilla Lycanites methods without an ItemStack param
+    protected ItemStoredCreatureInfo storedCreatureInfoRef = null;
 
     public ItemCreatureInfoStaff(String itemName, String textureName) {
         super(itemName, textureName);
@@ -42,90 +48,26 @@ public class ItemCreatureInfoStaff extends ItemStaffSummoning implements IItemWi
     @SideOnly(Side.CLIENT)
     @Override
     public String getDescription(ItemStack stack, World worldIn, List<String> tooltip, ITooltipFlag flagIn) {
-        if(this.getCreatureTypeName(stack).isEmpty()) return I18n.format("item.lycanitestweaks.creatureinfostaff.null");
-        return I18n.format(this.getTranslationKey() + ".description", this.getLevel(stack), this.getCreatureTypeName(stack));
-    }
-
-    @Override
-    public String getCreatureTypeName(ItemStack itemStack){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        if(nbt.hasKey(CREATURE_TYPE_NBT)) return nbt.getString(CREATURE_TYPE_NBT);
-        return "";
-    }
-
-    @Override
-    public String getCustomName(ItemStack itemStack){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        if(nbt.hasKey(CUSTOM_NAME_NBT)) return nbt.getString(CUSTOM_NAME_NBT);
-        return "";
-    }
-
-    @Override
-    public int getLevel(ItemStack itemStack){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        if(nbt.hasKey(MOB_LEVEL_NBT)) return nbt.getInteger(MOB_LEVEL_NBT);
-        return -1;
-    }
-
-    @Override
-    public int getEntitySubspecies(ItemStack itemStack){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        if(nbt.hasKey(SUBSPECIES_NBT)) return nbt.getInteger(SUBSPECIES_NBT);
-        return -1;
-    }
-
-    @Override
-    public int getEntityVariant(ItemStack itemStack){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        if(nbt.hasKey(VARIANT_NBT)) return nbt.getInteger(VARIANT_NBT);
-        return -1;
-    }
-
-    @Override
-    public void setCreatureTypeName(ItemStack itemStack, String type){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        nbt.setString(CREATURE_TYPE_NBT, type);
-        itemStack.setTagCompound(nbt);
-    }
-
-    @Override
-    public void setCustomName(ItemStack itemStack, String name){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        nbt.setString(CUSTOM_NAME_NBT, name);
-        itemStack.setTagCompound(nbt);
-    }
-
-    @Override
-    public void setLevel(ItemStack itemStack, int level){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        nbt.setInteger(MOB_LEVEL_NBT, level);
-        itemStack.setTagCompound(nbt);
-    }
-
-    @Override
-    public void setEntitySubspecies(ItemStack itemStack, int index){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        nbt.setInteger(SUBSPECIES_NBT, index);
-        itemStack.setTagCompound(nbt);
-    }
-
-    @Override
-    public void setEntityVariant(ItemStack itemStack, int index){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        nbt.setInteger(VARIANT_NBT, index);
-        itemStack.setTagCompound(nbt);
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(stack);
+        if(storedCreatureInfo != null) {
+            if(storedCreatureInfo.getCreatureTypeName().isEmpty()) return I18n.format("item.lycanitestweaks.creatureinfostaff.null");
+            return I18n.format(this.getTranslationKey() + ".description", storedCreatureInfo.getLevel(), storedCreatureInfo.getCreatureTypeName());
+        }
+        return I18n.format("item.lycanitestweaks.creatureinfostaff.null");
     }
 
     @Override
     public EnumActionResult onItemUse(EntityPlayer playerIn, World worldIn, BlockPos pos, EnumHand hand, EnumFacing facing, float hitX, float hitY, float hitZ) {
         // For creative use and NBT reference
-        this.itemStack = playerIn.getHeldItem(hand);
-        if(playerIn.capabilities.isCreativeMode && playerIn.isSneaking() && this.getCreatureTypeName(itemStack).isEmpty()) {
-            this.setCreatureTypeName(itemStack, "krake");
-            this.setCustomName(itemStack, "Krill Issue");
-            this.setLevel(itemStack, 0);
-            this.setEntitySubspecies(itemStack, 1);
-            this.setEntityVariant(itemStack, 2);
+        if(playerIn.capabilities.isCreativeMode && playerIn.isSneaking()) {
+            ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(playerIn.getHeldItem(hand));
+            if(storedCreatureInfo != null && storedCreatureInfo.getCreatureTypeName().isEmpty()) {
+                storedCreatureInfo.setCreatureTypeName("kobold");
+                storedCreatureInfo.setCustomName("Krill Issue");
+                storedCreatureInfo.setLevel(0);
+                storedCreatureInfo.setEntitySubspecies(1);
+                storedCreatureInfo.setEntityVariant(2);
+            }
         }
         return super.onItemUse(playerIn, worldIn, pos, hand, facing, hitX, hitY, hitZ);
     }
@@ -134,12 +76,12 @@ public class ItemCreatureInfoStaff extends ItemStaffSummoning implements IItemWi
     @Override
     public void applyMinionBehaviour(TameableCreatureEntity minion, EntityPlayer player) {
         super.applyMinionBehaviour(minion, player);
-        if(this.itemStack != null) {
-            if (!this.getCustomName(this.itemStack).isEmpty()) minion.setCustomNameTag(this.getCustomName(this.itemStack));
-            if(this.getEntitySubspecies(this.itemStack) != -1) minion.setSubspecies(this.getEntitySubspecies(this.itemStack));
-            if(this.getEntityVariant(this.itemStack) != -1) minion.setVariant(this.getEntityVariant(this.itemStack));
+        if(this.storedCreatureInfoRef != null) {
+            if(!this.storedCreatureInfoRef.getCustomName().isEmpty()) minion.setCustomNameTag(this.storedCreatureInfoRef.getCustomName());
+            minion.setSubspecies(this.storedCreatureInfoRef.getEntitySubspecies());
+            minion.setVariant(this.storedCreatureInfoRef.getEntityVariant());
             if(minion.isRareVariant()) minion.setVariant(0); // Only Challenge Soul should summon
-            if(this.getLevel(this.itemStack) != -1) minion.addLevel(this.getLevel(this.itemStack) - 1);
+            minion.addLevel(this.storedCreatureInfoRef.getLevel() - 1);
         }
         minion.getRandomSize();
     }
@@ -151,15 +93,16 @@ public class ItemCreatureInfoStaff extends ItemStaffSummoning implements IItemWi
     // ========== Start ==========
     @Override
     public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player, EnumHand hand) {
-        if (!CreatureManager.getInstance().config.isSummoningAllowed(world)) {
-            return new ActionResult<>(EnumActionResult.FAIL, player.getHeldItem(hand));
-        }
         ItemStack itemStack = player.getHeldItem(hand);
-        if(itemStack.getItem() instanceof ItemCreatureInfoStaff) {
-            ExtendedPlayer playerExt = ExtendedPlayer.getForPlayer(player);
-            if (playerExt != null) {
+        if (!CreatureManager.getInstance().config.isSummoningAllowed(world)) {
+            return new ActionResult<>(EnumActionResult.FAIL, itemStack);
+        }
+        ExtendedPlayer playerExt = ExtendedPlayer.getForPlayer(player);
+        if (playerExt != null) {
+            ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
+            if(storedCreatureInfo != null) {
                 // Summon Selected Mob:
-                CreatureInfo creatureInfo = CreatureManager.getInstance().getCreature(this.getCreatureTypeName(itemStack));
+                CreatureInfo creatureInfo = CreatureManager.getInstance().getCreature(storedCreatureInfo.getCreatureTypeName());
                 if (creatureInfo != null) {
                     if (!player.getEntityWorld().isRemote) {
                         playerExt.staffPortal = new PortalEntity(world, player, creatureInfo.getEntityClass(), this);
@@ -168,20 +111,22 @@ public class ItemCreatureInfoStaff extends ItemStaffSummoning implements IItemWi
                     }
                 }
                 else {
-                    return new ActionResult<>(EnumActionResult.FAIL, player.getHeldItem(hand));
+                    return new ActionResult<>(EnumActionResult.FAIL, itemStack);
                 }
             }
-            player.setActiveHand(hand);
-            return new ActionResult<>(EnumActionResult.SUCCESS, player.getHeldItem(hand));
         }
-        return super.onItemRightClick(world, player, hand);
+        player.setActiveHand(hand);
+        return new ActionResult<>(EnumActionResult.SUCCESS, itemStack);
     }
 
     // ========== Charged ==========
     @Override
     public boolean chargedAttack(ItemStack itemStack, World world, EntityLivingBase entity, float power) {
-        // Hack to sync creature properties before spawning
-        this.itemStack = itemStack;
+        // Reference to pass to methods without an ItemStack param
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
+        if(storedCreatureInfo != null) {
+            this.storedCreatureInfoRef = storedCreatureInfo;
+        }
         boolean success = super.chargedAttack(itemStack, world, entity, power);
         if(success && entity instanceof EntityPlayer){
             // Consume Soulstone:
@@ -189,5 +134,36 @@ public class ItemCreatureInfoStaff extends ItemStaffSummoning implements IItemWi
                 itemStack.setCount(Math.max(0, itemStack.getCount() - 1));
         }
         return success;
+    }
+
+    @Override
+    @Nullable
+    public NBTTagCompound getNBTShareTag(ItemStack stack) {
+        NBTTagCompound nbt = super.getNBTShareTag(stack);
+        if(nbt != null) {
+            ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(stack);
+            if (storedCreatureInfo != null) {
+                NBTBase capTag = StoredCreatureInfoHandler.ITEM_STORED_CREATURE_INFO.writeNBT(storedCreatureInfo, null);
+                if (capTag != null) {
+                    NBTTagCompound newTag = nbt.copy();
+                    newTag.setTag(IStoredCreatureInfo.FORGE_CAP_NBT, capTag);
+                    return newTag;
+                }
+            }
+        }
+        return nbt;
+    }
+
+    @Override
+    public void readNBTShareTag(ItemStack stack, @Nullable NBTTagCompound nbt) {
+        if(nbt != null && nbt.hasKey(IStoredCreatureInfo.FORGE_CAP_NBT)) {
+            NBTTagCompound capTag = nbt.getCompoundTag(IStoredCreatureInfo.FORGE_CAP_NBT);
+            ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(stack);
+            if(storedCreatureInfo != null) {
+                StoredCreatureInfoHandler.ITEM_STORED_CREATURE_INFO.readNBT(storedCreatureInfo, null, capTag);
+                nbt.removeTag(IStoredCreatureInfo.FORGE_CAP_NBT);
+            }
+        }
+        super.readNBTShareTag(stack, nbt);
     }
 }

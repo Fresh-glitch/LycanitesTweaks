@@ -6,31 +6,26 @@ import com.lycanitesmobs.core.entity.BaseCreatureEntity;
 import com.lycanitesmobs.core.info.CreatureManager;
 import com.lycanitesmobs.core.info.Variant;
 import lycanitestweaks.LycanitesTweaks;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
 import lycanitestweaks.handlers.ForgeConfigHandler;
 import lycanitestweaks.handlers.ForgeConfigProvider;
 import lycanitestweaks.handlers.features.entity.AttributesHandler;
-import lycanitestweaks.item.interfaces.IItemWithCreatureInfo;
 import lycanitestweaks.util.Triple;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ResourceLocation;
 import org.apache.logging.log4j.Level;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 /** Manages the stats of an EntityCreature. This applies difficulty multipliers, subspecies, levels, etc also. **/
 public abstract class ConfigurableItemHandler {
-
-	public static final String ITEM_STATS_UUID_NBT = LycanitesTweaks.MODID + ".ItemStatsUUID";
 
 	// UUIDs used for modifiers for specified equipment slot
 	// Different from Vanilla Item
@@ -46,12 +41,8 @@ public abstract class ConfigurableItemHandler {
 
 	// Bauble UUIDs are random and stored in item's nbt
 
-	private static final Set<UUID> ITEMS_WITHOUT_STATS = new HashSet<>();
-	private static final Map<UUID, ItemStats> ITEM_STATS = new HashMap<>();
-	private static final Set<UUID> ITEMS_WITHOUT_SLOTS = new HashSet<>();
-	private static final Map<UUID, EquipmentSlot> ITEM_SLOTS = new HashMap<>();
-
 	private static final Map<STAT, Double> STAT_OVERRIDES = new HashMap<>();
+	private static final Map<ItemStoredCreatureInfo, EquipmentSlot> ITEM_SLOT_CONFIG = new HashMap<>();
 
 	public enum STAT {
 		health,
@@ -66,70 +57,17 @@ public abstract class ConfigurableItemHandler {
 		pierce
 	}
 
-	public static @Nullable ItemStats getItemStats(ItemStack itemStack) {
-		NBTTagCompound nbt = itemStack.getTagCompound();
-		if(nbt == null) return null;
-
-		UUID uuid;
-		if(nbt.hasUniqueId(ITEM_STATS_UUID_NBT)) {
-			uuid = nbt.getUniqueId(ITEM_STATS_UUID_NBT);
-		}
-		else {
-			uuid = UUID.randomUUID();
-			nbt.setUniqueId(ITEM_STATS_UUID_NBT, uuid);
-			itemStack.setTagCompound(nbt);
-		}
-		if(uuid == null) return null;
-
-		if(ITEM_STATS.containsKey(uuid)) {
-			return ITEM_STATS.get(uuid);
-		}
-
-		if(ITEMS_WITHOUT_STATS.contains(uuid)) {
-			return null;
-		}
-
-		if(getConfigLine(itemStack.getItem().getRegistryName(), ForgeConfigHandler.server.customStaffConfig.customItemStats).isEmpty()) {
-			ITEMS_WITHOUT_STATS.add(uuid);
-		}
-		else {
-			return ITEM_STATS.computeIfAbsent(uuid, (newUUID -> new ItemStats(itemStack)));
-		}
-
-		return null;
-	}
-
 	public static @Nullable EquipmentSlot getItemSlot(ItemStack itemStack) {
-		NBTTagCompound nbt = itemStack.getTagCompound();
-		if(nbt == null) return null;
-
-		UUID uuid;
-		if(nbt.hasUniqueId(ITEM_STATS_UUID_NBT)) {
-			uuid = nbt.getUniqueId(ITEM_STATS_UUID_NBT);
-		}
-		else {
-			uuid = UUID.randomUUID();
-			nbt.setUniqueId(ITEM_STATS_UUID_NBT, uuid);
-			itemStack.setTagCompound(nbt);
-		}
-		if(uuid == null) return null;
-
-		if(ITEM_SLOTS.containsKey(uuid)) {
-			return ITEM_SLOTS.get(uuid);
-		}
-
-		if(ITEMS_WITHOUT_SLOTS.contains(uuid)) {
+		ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
+		if(storedCreatureInfo == null) {
 			return null;
 		}
 
-		if(getConfigLine(itemStack.getItem().getRegistryName(), ForgeConfigHandler.server.customStaffConfig.customItemSlots).isEmpty()) {
-			ITEMS_WITHOUT_SLOTS.add(uuid);
-		}
-		else {
-			return ITEM_SLOTS.computeIfAbsent(uuid, (newUUID -> new EquipmentSlot(itemStack)));
+		if(ITEM_SLOT_CONFIG.get(storedCreatureInfo) != null) {
+			return ITEM_SLOT_CONFIG.get(storedCreatureInfo);
 		}
 
-		return null;
+		return ITEM_SLOT_CONFIG.computeIfAbsent(storedCreatureInfo, (item -> new EquipmentSlot(itemStack)));
 	}
 
 	public static void getOtherSlotAttributeModifiers(@Nonnull ItemStats stats, String modifierName, Multimap<String, AttributeModifier> multimap) {
@@ -149,57 +87,26 @@ public abstract class ConfigurableItemHandler {
 		if(stats.pierce != 0) multimap.put(AttributesHandler.PIERCE.getName(), new AttributeModifier(ConfigurableItemHandler.PIERCE_MODIFIER, modifierName, stats.pierce, 0));
 	}
 
-	public static Multimap<String, AttributeModifier> getBaubleAttributeModifiers(@Nonnull ItemStats stats, String modifierName) {
+	public static Multimap<String, AttributeModifier> getBaubleAttributeModifiers(ItemStoredCreatureInfo storedCreatureInfo, String modifierName) {
+		ConfigurableItemHandler.ItemStats stats = storedCreatureInfo.getOrCreateStats();
 		Multimap<String, AttributeModifier> multimap = HashMultimap.create();
-		if(stats.damage != 0) multimap.put(SharedMonsterAttributes.ATTACK_DAMAGE.getName(), new AttributeModifier(getBaubleModifierUUID(stats.itemStack, SharedMonsterAttributes.ATTACK_DAMAGE.getName()), modifierName, stats.damage, 0));
-		if(stats.attackSpeed != 0) multimap.put(SharedMonsterAttributes.ATTACK_SPEED.getName(), new AttributeModifier(getBaubleModifierUUID(stats.itemStack, SharedMonsterAttributes.ATTACK_SPEED.getName()), modifierName, stats.attackSpeed, 0));
+		if(stats.damage != 0) multimap.put(SharedMonsterAttributes.ATTACK_DAMAGE.getName(), new AttributeModifier(storedCreatureInfo.getOrCreateBaubleModifierUUID(SharedMonsterAttributes.ATTACK_DAMAGE.getName()), modifierName, stats.damage, 0));
+		if(stats.attackSpeed != 0) multimap.put(SharedMonsterAttributes.ATTACK_SPEED.getName(), new AttributeModifier(storedCreatureInfo.getOrCreateBaubleModifierUUID(SharedMonsterAttributes.ATTACK_SPEED.getName()), modifierName, stats.attackSpeed, 0));
 
-		if(stats.health != 0) multimap.put(SharedMonsterAttributes.MAX_HEALTH.getName(), new AttributeModifier(getBaubleModifierUUID(stats.itemStack, SharedMonsterAttributes.MAX_HEALTH.getName()), modifierName, stats.health, 0));
-		if(stats.armor != 0) multimap.put(SharedMonsterAttributes.ARMOR.getName(), new AttributeModifier(getBaubleModifierUUID(stats.itemStack, SharedMonsterAttributes.ARMOR.getName()), modifierName, stats.armor, 0));
-		if(stats.speed != 0) multimap.put(SharedMonsterAttributes.MOVEMENT_SPEED.getName(), new AttributeModifier(getBaubleModifierUUID(stats.itemStack, SharedMonsterAttributes.MOVEMENT_SPEED.getName()), modifierName, stats.speed, 0));
+		if(stats.health != 0) multimap.put(SharedMonsterAttributes.MAX_HEALTH.getName(), new AttributeModifier(storedCreatureInfo.getOrCreateBaubleModifierUUID(SharedMonsterAttributes.MAX_HEALTH.getName()), modifierName, stats.health, 0));
+		if(stats.armor != 0) multimap.put(SharedMonsterAttributes.ARMOR.getName(), new AttributeModifier(storedCreatureInfo.getOrCreateBaubleModifierUUID(SharedMonsterAttributes.ARMOR.getName()), modifierName, stats.armor, 0));
+		if(stats.speed != 0) multimap.put(SharedMonsterAttributes.MOVEMENT_SPEED.getName(), new AttributeModifier(storedCreatureInfo.getOrCreateBaubleModifierUUID(SharedMonsterAttributes.MOVEMENT_SPEED.getName()), modifierName, stats.speed, 0));
 
-		if(stats.defense != 0) multimap.put(BaseCreatureEntity.DEFENSE.getName(), new AttributeModifier(getBaubleModifierUUID(stats.itemStack, BaseCreatureEntity.DEFENSE.getName()), modifierName, stats.defense, 0));
+		if(stats.defense != 0) multimap.put(BaseCreatureEntity.DEFENSE.getName(), new AttributeModifier(storedCreatureInfo.getOrCreateBaubleModifierUUID(BaseCreatureEntity.DEFENSE.getName()), modifierName, stats.defense, 0));
 
-		if(stats.pierce != 0) multimap.put(AttributesHandler.PIERCE.getName(), new AttributeModifier(getBaubleModifierUUID(stats.itemStack, AttributesHandler.PIERCE.getName()), modifierName, stats.pierce, 0));
+		if(stats.pierce != 0) multimap.put(AttributesHandler.PIERCE.getName(), new AttributeModifier(storedCreatureInfo.getOrCreateBaubleModifierUUID(AttributesHandler.PIERCE.getName()), modifierName, stats.pierce, 0));
 
 		return multimap;
 	}
 
-	public static UUID getBaubleModifierUUID(ItemStack itemStack, String attributeName){
-		NBTTagCompound itemNBT = itemStack.hasTagCompound() ? itemStack.getTagCompound() : new NBTTagCompound();
-
-		String tagList = "BaubleModifierUUIDs"; // TODO Prefix modid
-
-		// Read
-		NBTTagCompound uuids = null;
-		if(itemNBT.hasKey(tagList)) {
-			uuids = itemNBT.getCompoundTag(tagList);
-			if(uuids.hasUniqueId(attributeName)) {
-				return uuids.getUniqueId(attributeName);
-			}
-		}
-
-		// Write
-		if(uuids == null)
-			uuids = new NBTTagCompound();
-
-		UUID added = UUID.randomUUID();
-		uuids.setUniqueId(attributeName, added);
-		itemNBT.setTag(tagList, uuids);
-
-		return added;
-	}
-
-	public static void resetItemStats(ItemStack itemStack) {
-		ITEM_STATS.remove(itemStack);
-	}
-
 	public static void onConfigChange() {
-		ITEMS_WITHOUT_STATS.clear();
-		ITEM_STATS.clear();
-		ITEMS_WITHOUT_SLOTS.clear();
-		ITEM_SLOTS.clear();
 		STAT_OVERRIDES.clear();
+		ITEM_SLOT_CONFIG.clear();
 	}
 
 	private static String getConfigLine(ResourceLocation itemID, String[] configLines) {
@@ -321,7 +228,7 @@ public abstract class ConfigurableItemHandler {
 	public static class ItemStats {
 
 		public final ItemStack itemStack;
-		public final IItemWithCreatureInfo creatureInfo;
+		public final ItemStoredCreatureInfo storedCreatureInfo;
 
 		public final double health;
 		public final double armor;
@@ -338,7 +245,7 @@ public abstract class ConfigurableItemHandler {
 
 		public ItemStats(ItemStack itemStack) {
 			this.itemStack = itemStack;
-			this.creatureInfo = itemStack.getItem() instanceof IItemWithCreatureInfo ? (IItemWithCreatureInfo) itemStack.getItem() : null;
+			this.storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
 
 			this.health = calculateStat(STAT.health);
 			this.armor = calculateStat(STAT.armor);
@@ -387,9 +294,9 @@ public abstract class ConfigurableItemHandler {
 		 * @return The stat multiplier.
 		 */
 		public double getVariantMultiplier(STAT stat) {
-			if(this.creatureInfo == null) return 1D;
+			if(this.storedCreatureInfo == null) return 1D;
 
-			String statKey = this.creatureInfo.getEntityVariantRarity(this.itemStack) + "-" + stat.toString().toUpperCase();
+			String statKey = this.storedCreatureInfo.getEntityVariantRarity() + "-" + stat.toString().toUpperCase();
 			return Variant.STAT_MULTIPLIERS.getOrDefault(statKey, 1D);
 		}
 
@@ -402,10 +309,10 @@ public abstract class ConfigurableItemHandler {
 		public double getLevelMultiplier(STAT stat) {
 			double statLevel;
 			double levelMultiplier;
-			if(this.creatureInfo == null)
+			if(this.storedCreatureInfo == null)
 				statLevel = 0;
 			else
-				statLevel = Math.max(0, this.creatureInfo.getLevel(this.itemStack));
+				statLevel = Math.max(0, this.storedCreatureInfo.getLevel());
 
 			levelMultiplier = STAT_OVERRIDES.computeIfAbsent(stat, value -> parseStatOverrideConfig(stat));
 

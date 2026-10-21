@@ -1,5 +1,7 @@
 package lycanitestweaks.item;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.lycanitesmobs.core.entity.BaseCreatureEntity;
 import com.lycanitesmobs.core.entity.ExtendedPlayer;
 import com.lycanitesmobs.core.info.CreatureInfo;
@@ -7,6 +9,7 @@ import com.lycanitesmobs.core.info.CreatureManager;
 import com.lycanitesmobs.core.info.Variant;
 import com.lycanitesmobs.core.item.ItemBase;
 import com.lycanitesmobs.core.pets.PetEntry;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
 import lycanitestweaks.capability.toggleableitem.IToggleableItem;
 import lycanitestweaks.capability.toggleableitem.ToggleableItem;
 import lycanitestweaks.compat.ModLoadedUtil;
@@ -19,12 +22,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.util.ITooltipFlag;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EnumActionResult;
@@ -32,9 +35,7 @@ import net.minecraft.util.EnumHand;
 import net.minecraft.world.World;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
@@ -42,21 +43,16 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 public class ItemHellShield extends ItemPassive implements IItemWithCreatureInfo {
 
     public static final DamageSource LIFE_LINK = new DamageSource("lifeLink").setDamageBypassesArmor();
 
-    // Updates every tick
-    // Living Update -> Clear
-    // Item Tick -> Add
-    // Free to use during the tick
-    // Used by both Client and Server
-    private static final Map<UUID, Pair<Integer, Double>> SHIELD_STATES = new HashMap<>();
+    private static final Cache<Entity, Pair<Integer, Double>> STATUS_CACHE = CacheBuilder.newBuilder()
+            .expireAfterWrite(1, TimeUnit.SECONDS)
+            .build();
     
     public ItemHellShield(String name) {
         super(name);
@@ -70,7 +66,8 @@ public class ItemHellShield extends ItemPassive implements IItemWithCreatureInfo
      * double defense
      */
     public static Pair<Integer, Double> getShieldState(EntityLivingBase entityLivingBase) {
-        return SHIELD_STATES.getOrDefault(entityLivingBase.getUniqueID(), DISABLED_SHIELD);
+        Pair<Integer, Double> status = STATUS_CACHE.getIfPresent(entityLivingBase);
+        return status == null ? DISABLED_SHIELD : status;
     }
     public static final Pair<Integer, Double> DISABLED_SHIELD = new Pair<>(0, 0D);
 
@@ -92,14 +89,18 @@ public class ItemHellShield extends ItemPassive implements IItemWithCreatureInfo
         StringBuilder rawStrings = new StringBuilder();
         rawStrings.append(I18n.format("item.lycanitestweaks.hellshield.description"));
 
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
         CreatureInfo creatureInfo = CreatureManager.getInstance().getCreature("asmodeus");
-        if(creatureInfo != null && this.getLevel(itemStack) > 0) {
-            rawStrings.append("\n");
-            Variant variant = creatureInfo.getSubspecies(0).getVariant(this.getEntityVariant(itemStack));
-            if (variant != null) rawStrings.append(variant.getTitle()).append(" ");
+        if(storedCreatureInfo != null && creatureInfo != null) {
+            int level = storedCreatureInfo.getLevel();
+            if(level > 0) {
+                rawStrings.append("\n");
+                Variant variant = creatureInfo.getSubspecies(0).getVariant(storedCreatureInfo.getEntityVariant());
+                if (variant != null) rawStrings.append(variant.getTitle()).append(" ");
 
-            rawStrings.append(creatureInfo.getTitle()).append(" ");
-            rawStrings.append(I18n.format("entity.level")).append(" ").append(this.getLevel(itemStack));
+                rawStrings.append(creatureInfo.getTitle()).append(" ");
+                rawStrings.append(I18n.format("entity.level")).append(" ").append(level);
+            }
         }
 
         rawStrings.append("\n");
@@ -111,8 +112,9 @@ public class ItemHellShield extends ItemPassive implements IItemWithCreatureInfo
                 }
             }
             rawStrings.append(I18n.format("lycanitestweaks.ability.hellshield.tooltip0")).append("\n");
-            ConfigurableItemHandler.ItemStats stats = ConfigurableItemHandler.getItemStats(itemStack);
-            if(stats != null) {
+
+            if(storedCreatureInfo != null) {
+                ConfigurableItemHandler.ItemStats stats = storedCreatureInfo.getOrCreateStats();
                 rawStrings.append(I18n.format("lycanitestweaks.ability.hellshield.tooltip1", stats.defense)).append("\n");
             }
         }
@@ -147,22 +149,22 @@ public class ItemHellShield extends ItemPassive implements IItemWithCreatureInfo
 
         IToggleableItem toggleableItem = ToggleableItem.getForItemStack(stack);
         if(toggleableItem != null) {
-            if(toggleableItem.isAbilityToggled() && stack.getItem() instanceof ItemHellShield) {
-                ItemHellShield hellShield = (ItemHellShield) stack.getItem();
-                ConfigurableItemHandler.ItemStats stats = ConfigurableItemHandler.getItemStats(stack);
-                if(stats != null) {
-                    int variant = hellShield.getEntityVariant(stack);
+            if(toggleableItem.isAbilityToggled()) {
+                ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(stack);
+                if(storedCreatureInfo != null) {
+                    ConfigurableItemHandler.ItemStats stats = storedCreatureInfo.getOrCreateStats();
+                    int variant = storedCreatureInfo.getEntityVariant();
                     Pair<Integer, Double> shieldState = getShieldState(entity);
                     if(shieldState == DISABLED_SHIELD) {
                         shieldState = new Pair<>(variant, stats.defense);
-                    }   
+                    }
                     else if(stats.defense > shieldState.getRight()) {
                         shieldState = new Pair<>(variant, stats.defense);
                     }
                     else if(variant > shieldState.getLeft()) {
                         shieldState = new Pair<>(variant, stats.defense);
                     }
-                    SHIELD_STATES.put(entity.getUniqueID(), shieldState);
+                    STATUS_CACHE.put(entity, shieldState);
                 }
             }
         }
@@ -186,22 +188,10 @@ public class ItemHellShield extends ItemPassive implements IItemWithCreatureInfo
         return new ActionResult(EnumActionResult.SUCCESS, itemStack);
     }
 
-    // Client and Server
-    @SubscribeEvent
-    public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
-        SHIELD_STATES.remove(event.getEntityLiving().getUniqueID()); // Clear Existing -> Item Tick Add -> Use elsewhere during Tick
-    }
-
-    // Client and Server
-    @SubscribeEvent
-    public void onWorldUnload(WorldEvent.Unload event) {
-        SHIELD_STATES.clear();
-    }
-
     // Server
     @SubscribeEvent
     public void onLivingDeath(LivingDeathEvent event) {
-        SHIELD_STATES.remove(event.getEntityLiving().getUniqueID());
+        STATUS_CACHE.invalidate(event.getEntityLiving());
     }
 
     @SubscribeEvent
@@ -280,93 +270,5 @@ public class ItemHellShield extends ItemPassive implements IItemWithCreatureInfo
             damageReduction = Math.max(damageReduction, defense);
             event.setAmount(Math.max(1F, event.getAmount() - damageReduction));
         }
-    }
-
-    @Override
-    public String getCreatureTypeName(ItemStack itemStack){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        if(nbt.hasKey(CREATURE_TYPE_NBT)) return nbt.getString(CREATURE_TYPE_NBT);
-        return "";
-    }
-
-    @Override
-    public String getCustomName(ItemStack itemStack){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        if(nbt.hasKey(CUSTOM_NAME_NBT)) return nbt.getString(CUSTOM_NAME_NBT);
-        return "";
-    }
-
-    @Override
-    public int getLevel(ItemStack itemStack){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        if(nbt.hasKey(MOB_LEVEL_NBT)) return nbt.getInteger(MOB_LEVEL_NBT);
-        return -1;
-    }
-
-    @Override
-    public int getEntitySubspecies(ItemStack itemStack){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        if(nbt.hasKey(SUBSPECIES_NBT)) return nbt.getInteger(SUBSPECIES_NBT);
-        return -1;
-    }
-
-    @Override
-    public int getEntityVariant(ItemStack itemStack){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        if(nbt.hasKey(VARIANT_NBT)) return nbt.getInteger(VARIANT_NBT);
-        return -1;
-    }
-
-    @Override
-    public String getEntityVariantRarity(ItemStack itemStack){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        if(nbt.hasKey(VARIANT_RARITY_NBT)) return nbt.getString(VARIANT_RARITY_NBT);
-        return COMMON_VALUE;
-    }
-
-    @Override
-    public void setCreatureTypeName(ItemStack itemStack, String type){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        nbt.setString(CREATURE_TYPE_NBT, type);
-        itemStack.setTagCompound(nbt);
-    }
-
-    @Override
-    public void setCustomName(ItemStack itemStack, String name){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        nbt.setString(CUSTOM_NAME_NBT, name);
-        itemStack.setTagCompound(nbt);
-    }
-
-    @Override
-    public void setLevel(ItemStack itemStack, int level){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        nbt.setInteger(MOB_LEVEL_NBT, level);
-        itemStack.setTagCompound(nbt);
-        ConfigurableItemHandler.resetItemStats(itemStack);
-    }
-
-    @Override
-    public void setEntitySubspecies(ItemStack itemStack, int index){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        nbt.setInteger(SUBSPECIES_NBT, index);
-        itemStack.setTagCompound(nbt);
-        ConfigurableItemHandler.resetItemStats(itemStack);
-    }
-
-    @Override
-    public void setEntityVariant(ItemStack itemStack, int index){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        nbt.setInteger(VARIANT_NBT, index);
-        itemStack.setTagCompound(nbt);
-        ConfigurableItemHandler.resetItemStats(itemStack);
-    }
-
-    @Override
-    public void setEntityVariantRarity(ItemStack itemStack, String rarity){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        nbt.setString(VARIANT_RARITY_NBT, rarity);
-        itemStack.setTagCompound(nbt);
-        ConfigurableItemHandler.resetItemStats(itemStack);
     }
 }

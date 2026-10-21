@@ -4,6 +4,9 @@ import com.lycanitesmobs.core.entity.BaseProjectileEntity;
 import com.lycanitesmobs.core.info.projectile.ProjectileManager;
 import com.lycanitesmobs.core.item.ChargeItem;
 import lycanitestweaks.LycanitesTweaks;
+import lycanitestweaks.capability.storedcreatureinfo.IStoredCreatureInfo;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
+import lycanitestweaks.capability.storedcreatureinfo.StoredCreatureInfoHandler;
 import lycanitestweaks.client.renderer.RenderContext;
 import lycanitestweaks.entity.projectile.EntityChargeArrow;
 import lycanitestweaks.handlers.ForgeConfigHandler;
@@ -20,6 +23,8 @@ import net.minecraft.init.SoundEvents;
 import net.minecraft.item.IItemPropertyGetter;
 import net.minecraft.item.ItemBow;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTBase;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.stats.StatList;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.EnumActionResult;
@@ -31,6 +36,7 @@ import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 
@@ -68,6 +74,37 @@ public class ItemChargeStaff extends ItemBow {
     @Override
     public boolean getIsRepairable(ItemStack toRepair, ItemStack repair){
         return repair.getItem() == Items.END_CRYSTAL;
+    }
+
+    @Override
+    @Nullable
+    public NBTTagCompound getNBTShareTag(ItemStack stack) {
+        NBTTagCompound nbt = super.getNBTShareTag(stack);
+        if(nbt != null) {
+            ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(stack);
+            if (storedCreatureInfo != null) {
+                NBTBase capTag = StoredCreatureInfoHandler.ITEM_STORED_CREATURE_INFO.writeNBT(storedCreatureInfo, null);
+                if (capTag != null) {
+                    NBTTagCompound newTag = nbt.copy();
+                    newTag.setTag(IStoredCreatureInfo.FORGE_CAP_NBT, capTag);
+                    return newTag;
+                }
+            }
+        }
+        return nbt;
+    }
+
+    @Override
+    public void readNBTShareTag(ItemStack stack, @Nullable NBTTagCompound nbt) {
+        if(nbt != null && nbt.hasKey(IStoredCreatureInfo.FORGE_CAP_NBT)) {
+            NBTTagCompound capTag = nbt.getCompoundTag(IStoredCreatureInfo.FORGE_CAP_NBT);
+            ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(stack);
+            if(storedCreatureInfo != null) {
+                StoredCreatureInfoHandler.ITEM_STORED_CREATURE_INFO.readNBT(storedCreatureInfo, null, capTag);
+                nbt.removeTag(IStoredCreatureInfo.FORGE_CAP_NBT);
+            }
+        }
+        super.readNBTShareTag(stack, nbt);
     }
 
     @Override
@@ -225,8 +262,9 @@ public class ItemChargeStaff extends ItemBow {
         if(projectile == null) return;
         ItemStack itemStack = entityLivingBase.getActiveItemStack();
 
-        ConfigurableItemHandler.ItemStats stats = ConfigurableItemHandler.getItemStats(itemStack);
-        if (stats != null) {
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
+        if(storedCreatureInfo != null) {
+            ConfigurableItemHandler.ItemStats stats = storedCreatureInfo.getOrCreateStats();
             if (stats.damage >= 0) projectile.setDamage((int) (projectile.damage * stats.damage / 2D));
             if (stats.pierce >= 0) projectile.pierce = (int) stats.pierce;
         }

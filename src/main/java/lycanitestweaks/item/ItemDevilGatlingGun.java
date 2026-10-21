@@ -7,6 +7,7 @@ import com.lycanitesmobs.core.info.CreatureManager;
 import com.lycanitesmobs.core.info.Variant;
 import com.lycanitesmobs.core.item.ChargeItem;
 import com.lycanitesmobs.core.item.ItemBase;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
 import lycanitestweaks.compat.ModLoadedUtil;
 import lycanitestweaks.handlers.ForgeConfigHandler;
 import lycanitestweaks.handlers.features.item.ConfigurableItemHandler;
@@ -45,14 +46,18 @@ public class ItemDevilGatlingGun extends ItemBossRangedWeapon {
         StringBuilder rawStrings = new StringBuilder();
         rawStrings.append(I18n.format("item.lycanitestweaks.devilgatlinggun.description"));
 
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
         CreatureInfo creatureInfo = CreatureManager.getInstance().getCreature("asmodeus");
-        if(creatureInfo != null && this.getLevel(itemStack) >= 0) {
-            rawStrings.append("\n");
-            Variant variant = creatureInfo.getSubspecies(0).getVariant(this.getEntityVariant(itemStack));
-            if (variant != null) rawStrings.append(variant.getTitle()).append(" ");
+        if(storedCreatureInfo != null && creatureInfo != null) {
+            int level = storedCreatureInfo.getLevel();
+            if(level > 0) {
+                rawStrings.append("\n");
+                Variant variant = creatureInfo.getSubspecies(0).getVariant(storedCreatureInfo.getEntityVariant());
+                if (variant != null) rawStrings.append(variant.getTitle()).append(" ");
 
-            rawStrings.append(creatureInfo.getTitle()).append(" ");
-            rawStrings.append(I18n.format("entity.level")).append(" ").append(this.getLevel(itemStack));
+                rawStrings.append(creatureInfo.getTitle()).append(" ");
+                rawStrings.append(I18n.format("entity.level")).append(" ").append(level);
+            }
         }
 
         rawStrings.append("\n");
@@ -70,8 +75,8 @@ public class ItemDevilGatlingGun extends ItemBossRangedWeapon {
             rawStrings.append("\n").append(I18n.format("item.lycanitestweaks.tooltip.expand", "SHIFT"));
         }
 
-        ConfigurableItemHandler.ItemStats stats = ConfigurableItemHandler.getItemStats(itemStack);
-        if(stats != null) {
+        if(storedCreatureInfo != null) {
+            ConfigurableItemHandler.ItemStats stats = storedCreatureInfo.getOrCreateStats();
             rawStrings.append("\n");
             rawStrings.append(I18n.format("item.stats.ticksperuse.weapon.tooltip", stats.ticksPerUse / 20F));
         }
@@ -149,9 +154,9 @@ public class ItemDevilGatlingGun extends ItemBossRangedWeapon {
         useTime -= 20;
 
         int useRate = 10;
-        ConfigurableItemHandler.ItemStats stats = ConfigurableItemHandler.getItemStats(stack);
-        if(stats != null) {
-            useRate = stats.ticksPerUse;
+        ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(event.getItem());
+        if(storedCreatureInfo != null) {
+            useRate = storedCreatureInfo.getOrCreateStats().ticksPerUse;
         }
         if(useRate <= 0) useRate = 1;
 

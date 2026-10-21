@@ -5,7 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import com.lycanitesmobs.core.entity.BaseCreatureEntity;
 import lycanitestweaks.LycanitesTweaks;
-import lycanitestweaks.item.interfaces.IItemWithCreatureInfo;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.storage.loot.LootContext;
@@ -33,12 +33,10 @@ public class ItemWithCreatureInfo extends LootFunction {
 
     @Override
     public ItemStack apply(ItemStack stack, Random rand, LootContext context) {
-        if(stack.getItem() instanceof IItemWithCreatureInfo) {
-            if (context.getLootedEntity() instanceof BaseCreatureEntity) {
-                IItemWithCreatureInfo itemWithCreatureInfo = (IItemWithCreatureInfo) stack.getItem();
-                BaseCreatureEntity creature = (BaseCreatureEntity) context.getLootedEntity();
-
-                itemWithCreatureInfo.setAllFromCreature(stack, creature);
+        if(context.getLootedEntity() instanceof BaseCreatureEntity) {
+            ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(stack);
+            if(storedCreatureInfo != null) {
+                storedCreatureInfo.setAllFromCreature((BaseCreatureEntity) context.getLootedEntity());
             }
         }
 

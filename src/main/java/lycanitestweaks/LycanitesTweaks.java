@@ -9,6 +9,7 @@ import com.lycanitesmobs.core.spawner.SpawnerManager;
 import lycanitestweaks.capability.entitystorecreature.EntityStoreCreatureCapabilityHandler;
 import lycanitestweaks.capability.lycanitestweaksplayer.LycanitesTweaksPlayerCapabilityHandler;
 import lycanitestweaks.capability.playermoblevel.PlayerMobLevelCapabilityHandler;
+import lycanitestweaks.capability.storedcreatureinfo.StoredCreatureInfoHandler;
 import lycanitestweaks.capability.toggleableitem.ToggleableItemHandler;
 import lycanitestweaks.command.LycanitesTweaksCommand;
 import lycanitestweaks.compat.BaublesHandler;
@@ -79,6 +80,10 @@ public class LycanitesTweaks {
         MinecraftForge.EVENT_BUS.register(LycanitesTweaksPlayerCapabilityHandler.AttachCapabilityHandler.class);
         MinecraftForge.EVENT_BUS.register(LycanitesTweaksPlayerCapabilityHandler.class);
         MinecraftForge.EVENT_BUS.register(ItemSoulgazerTweaksHandler.class);
+
+        StoredCreatureInfoHandler.registerCapability();
+        MinecraftForge.EVENT_BUS.register(StoredCreatureInfoHandler.AttachCapabilityHandler.class);
+        MinecraftForge.EVENT_BUS.register(StoredCreatureInfoHandler.class);
 
         ToggleableItemHandler.registerCapability();
         MinecraftForge.EVENT_BUS.register(ToggleableItemHandler.AttachCapabilityHandler.class);

@@ -3,7 +3,7 @@ package lycanitestweaks.mixin.lycanitestweakscore.assetload;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.lycanitesmobs.core.entity.BaseCreatureEntity;
 import com.lycanitesmobs.core.info.ItemDrop;
-import lycanitestweaks.item.interfaces.IItemWithCreatureInfo;
+import lycanitestweaks.capability.storedcreatureinfo.ItemStoredCreatureInfo;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,8 +19,11 @@ public abstract class ItemDrop_WithCreatureInfoMixin {
             remap = false
     )
     public ItemStack lycanitesTweaks_lycanitesMobsItemDrop_getEntityDropItemStackWithCreatureInfo(ItemStack itemStack, EntityLivingBase entity){
-        if(itemStack.getItem() instanceof IItemWithCreatureInfo && entity instanceof BaseCreatureEntity){
-            ((IItemWithCreatureInfo) itemStack.getItem()).setAllFromCreature(itemStack, (BaseCreatureEntity) entity);
+        if(entity instanceof BaseCreatureEntity) {
+            ItemStoredCreatureInfo storedCreatureInfo = ItemStoredCreatureInfo.getForItemStack(itemStack);
+            if(storedCreatureInfo != null) {
+                storedCreatureInfo.setAllFromCreature((BaseCreatureEntity) entity);
+            }
         }
         return itemStack;
     }

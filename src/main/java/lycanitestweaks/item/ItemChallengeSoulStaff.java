@@ -6,36 +6,11 @@ import com.lycanitesmobs.core.pets.SummonSet;
 import lycanitestweaks.handlers.ForgeConfigHandler;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
 
 public class ItemChallengeSoulStaff extends ItemCreatureInfoStaff {
 
-    private static final String SPAWNED_AS_BOSS_NBT = "SpawnedAsBoss";
-
     public ItemChallengeSoulStaff(String itemName, String textureName) {
         super(itemName, textureName);
-    }
-
-    // Temp way to give Lobber something as it isn't tameable
-    @Override
-    public void setCreatureTypeName(ItemStack itemStack, String type){
-        if(type.equals("lobber")) {
-            type = "volcan";
-            this.setSpawnedAsBoss(itemStack);
-        }
-        super.setCreatureTypeName(itemStack, type);
-    }
-
-    public boolean getSpawnedAsBoss(ItemStack itemStack){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        if(nbt.hasKey(SPAWNED_AS_BOSS_NBT)) return nbt.getBoolean(SPAWNED_AS_BOSS_NBT);
-        return false;
-    }
-
-    public void setSpawnedAsBoss(ItemStack itemStack){
-        NBTTagCompound nbt = this.getTagCompound(itemStack);
-        nbt.setBoolean(SPAWNED_AS_BOSS_NBT, true);
-        itemStack.setTagCompound(nbt);
     }
 
     // ==================================================
@@ -80,12 +55,12 @@ public class ItemChallengeSoulStaff extends ItemCreatureInfoStaff {
         SummonSet summonSet = ExtendedPlayer.getForPlayer(player).getSelectedSummonSet();
         summonSet.applyBehaviour(minion);
         // Ensure properties are synced from stack nbt
-        if(this.itemStack != null) {
-            if(this.getSpawnedAsBoss(itemStack)) minion.spawnedAsBoss = true;
-            if (!this.getCustomName(this.itemStack).isEmpty()) minion.setCustomNameTag(this.getCustomName(this.itemStack));
-            if(this.getEntitySubspecies(this.itemStack) != -1) minion.setSubspecies(this.getEntitySubspecies(this.itemStack));
-            if(this.getEntityVariant(this.itemStack) != -1) minion.setVariant(this.getEntityVariant(this.itemStack));
-            if(this.getLevel(this.itemStack) != -1) minion.addLevel(this.getLevel(this.itemStack) - 1);
+        if(this.storedCreatureInfoRef != null) {
+            minion.spawnedAsBoss = this.storedCreatureInfoRef.getSpawnedAsBoss();
+            if(!this.storedCreatureInfoRef.getCustomName().isEmpty()) minion.setCustomNameTag(this.storedCreatureInfoRef.getCustomName());
+            minion.setSubspecies(this.storedCreatureInfoRef.getEntitySubspecies());
+            minion.setVariant(this.storedCreatureInfoRef.getEntityVariant());
+            minion.addLevel(this.storedCreatureInfoRef.getLevel() - 1);
             minion.firstSpawn = false;
         }
         minion.getRandomSize();
