@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "lycanitestweaks.mixin.lycanitesmobspatches",
+  "refmap": "mixins.lycanitestweaks.refmap.json",
+  "compatibilityLevel": "JAVA_8",
+  "target": "@env(DEFAULT)",
+  "minVersion": "0.8",
+  "mixins": [
+    "WorldEventListener_ProtectionLeakMixin"
+  ],
+  "injectors": {
+    "maxShiftBy": 10
+  }
+}

@@ -26,6 +26,7 @@ import lycanitestweaks.handlers.features.entity.ChargeEnchantmentsHandler;
 import lycanitestweaks.handlers.features.entity.EntityLivingHandler;
 import lycanitestweaks.handlers.features.entity.EntityLootHandler;
 import lycanitestweaks.handlers.features.entity.GenericBestiaryHandler;
+import lycanitestweaks.handlers.features.entity.SpawnerPlayerLeakHandler;
 import lycanitestweaks.handlers.features.item.ItemHandler;
 import lycanitestweaks.handlers.features.item.ItemSoulgazerTweaksHandler;
 import lycanitestweaks.info.altar.AltarInfoBeastiary;
@@ -108,6 +109,8 @@ public class LycanitesTweaks {
         MinecraftForge.EVENT_BUS.register(EntityLivingHandler.class);
         MinecraftForge.EVENT_BUS.register(GenericBestiaryHandler.class);
         MinecraftForge.EVENT_BUS.register(CuringEffectsHandler.class);
+        if(ForgeConfigHandler.mixinPatchesConfig.fixSpawnerPlayerLeak)
+            MinecraftForge.EVENT_BUS.register(SpawnerPlayerLeakHandler.class);
 
         if(ForgeConfigHandler.server.effectsConfig.registerConsumed || ForgeConfigHandler.server.effectsConfig.registerVoided)
             MinecraftForge.EVENT_BUS.register(CripplingEffectsHandler.class);

@@ -6,10 +6,9 @@
   "target": "@env(DEFAULT)",
   "minVersion": "0.8",
   "mixins": [
-    "WorldEventListener_ProtectionLeakMixin",
-    "core.spawner.PlayerSpawnTrigger_PlayerLeakMixin",
-    "core.spawner.SpawnTrigger_PlayerLeakMixin",
-    "core.spawner.Spawner_PlayerLeakMixin"
+    "core.spawner.PlayerSpawnTrigger_AccessorMixin",
+    "core.spawner.SpawnTrigger_AccessorMixin",
+    "core.spawner.Spawner_AccessorMixin"
   ],
   "injectors": {
     "maxShiftBy": 10

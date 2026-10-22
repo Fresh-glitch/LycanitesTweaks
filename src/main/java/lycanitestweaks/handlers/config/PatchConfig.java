@@ -584,9 +584,15 @@ public class PatchConfig {
     @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patchestileentityinteractiondistance.json")
     public boolean fixTileEntityInteractionDistance = true;
 
-    @Config.Comment("Fix spawners and \"Custom Entity Block Protection\" keeping players and entities, and with them their worlds, in memory until the game closes")
-    @Config.Name("Fix Memory Leaks")
+    @Config.Comment("Fix spawners keeping every player they were triggered by, and the world that player was in, in memory until the game closes")
+    @Config.Name("Fix Spawner Player Memory Leak")
     @Config.RequiresMcRestart
-    @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patches.memoryleaks.json")
-    public boolean fixMemoryLeaks = true;
+    @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patches.spawnerplayerleak.json")
+    public boolean fixSpawnerPlayerLeak = true;
+
+    @Config.Comment("Fix entities listed in \"Custom Entity Block Protection\" being kept in memory, with their world, until the game closes")
+    @Config.Name("Fix Custom Entity Block Protection Memory Leak")
+    @Config.RequiresMcRestart
+    @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patches.blockprotectionleak.json")
+    public boolean fixCustomBlockProtectionLeak = true;
 }
