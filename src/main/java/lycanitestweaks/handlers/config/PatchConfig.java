@@ -590,7 +590,7 @@ public class PatchConfig {
     @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patches.spawnerplayerleak.json")
     public boolean fixSpawnerPlayerLeak = true;
 
-    @Config.Comment("Fix entities listed in \"Custom Entity Block Protection\" being kept in memory, with their world, until the game closes")
+    @Config.Comment("Fix \"Custom Entity Block Protection\" keeping its entities, and on clients every world left through a dimension change, in memory until the game closes")
     @Config.Name("Fix Custom Entity Block Protection Memory Leak")
     @Config.RequiresMcRestart
     @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patches.blockprotectionleak.json")
