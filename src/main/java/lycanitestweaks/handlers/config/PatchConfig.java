@@ -583,4 +583,10 @@ public class PatchConfig {
     @Config.RequiresMcRestart
     @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patchestileentityinteractiondistance.json")
     public boolean fixTileEntityInteractionDistance = true;
+
+    @Config.Comment("Fix spawners and \"Custom Entity Block Protection\" keeping players and entities, and with them their worlds, in memory until the game closes")
+    @Config.Name("Fix Memory Leaks")
+    @Config.RequiresMcRestart
+    @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patches.memoryleaks.json")
+    public boolean fixMemoryLeaks = true;
 }
