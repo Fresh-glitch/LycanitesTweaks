@@ -13,6 +13,7 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
@@ -29,6 +30,14 @@ public class AsmodeusBossInfoOverlay extends LycanitesBossInfoOverlay {
             if(creature.creatureInfo.getName().equals("asmodeus"))
                 PacketHandler.instance.sendToServer(new PacketLycanitesBossInfo(creature));
         }
+    }
+
+    // the dummies keep their world
+    @SubscribeEvent
+    public static void onWorldUnload(WorldEvent.Unload event) {
+        if(!event.getWorld().isRemote) return;
+        dummyShield = null;
+        dummyAstaroth = null;
     }
 
     @SubscribeEvent(priority = EventPriority.LOW)

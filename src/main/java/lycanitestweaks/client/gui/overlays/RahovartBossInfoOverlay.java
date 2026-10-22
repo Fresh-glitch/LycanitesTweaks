@@ -15,6 +15,7 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
@@ -33,6 +34,16 @@ public class RahovartBossInfoOverlay extends LycanitesBossInfoOverlay {
             if(creature.creatureInfo.getName().equals("rahovart"))
                 PacketHandler.instance.sendToServer(new PacketLycanitesBossInfo(creature));
         }
+    }
+
+    // the dummies keep their world
+    @SubscribeEvent
+    public static void onWorldUnload(WorldEvent.Unload event) {
+        if(!event.getWorld().isRemote) return;
+        dummyOrb = null;
+        dummyBelph = null;
+        dummyBehemoth = null;
+        dummyWraith = null;
     }
 
     @SubscribeEvent(priority = EventPriority.LOW)

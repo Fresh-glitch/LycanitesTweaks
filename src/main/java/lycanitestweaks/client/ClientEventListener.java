@@ -9,6 +9,7 @@ import lycanitestweaks.capability.lycanitestweaksplayer.LycanitesTweaksPlayerCap
 import lycanitestweaks.capability.playermoblevel.IPlayerMobLevelCapability;
 import lycanitestweaks.capability.playermoblevel.PlayerMobLevelCapability;
 import lycanitestweaks.client.keybinds.KeyHandler;
+import lycanitestweaks.client.renderer.RenderContext;
 import lycanitestweaks.compat.ModLoadedUtil;
 import lycanitestweaks.entity.item.EntityBossSummonCrystal;
 import lycanitestweaks.entity.item.EntityEncounterSummonCrystal;
@@ -21,9 +22,17 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemAppleGold;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
+import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
 public class ClientEventListener {
+
+    @SubscribeEvent
+    public static void onWorldUnload(WorldEvent.Unload event) {
+        if(!event.getWorld().isRemote) return;
+        RenderContext.currentRenderEntity = null;
+        RenderContext.currentRenderStack = null;
+    }
 
     @SubscribeEvent
     public static void onItemTooltip(ItemTooltipEvent event) {

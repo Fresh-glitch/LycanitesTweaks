@@ -33,6 +33,7 @@ import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
+import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
@@ -209,6 +210,11 @@ public class ItemHellfireCannon extends ItemBossRangedWeapon {
     @Override
     public SoundEvent getFireSound(){
         return AssetManager.getSound("hellfirewave");
+    }
+
+    @SubscribeEvent
+    public static void onWorldUnload(WorldEvent.Unload event) {
+        if(event.getWorld().isRemote) clientPlayerOrbs.clear();
     }
 
     @SubscribeEvent
