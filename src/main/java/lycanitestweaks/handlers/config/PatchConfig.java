@@ -157,8 +157,27 @@ public class PatchConfig {
     public boolean summoningStaffSwapOff = true;
 
     @Config.Comment({
+            "Fix Projectiles that place fire being unable to be configured to place fire on the side of blocks correctly.",
+            "For Fire Blocks:",
+            "    \"solidSurface\" setting will be ignored",
+            "    \"height\" is used for radius and height of area to place fire",
+            "    Fire is only placed if next to a burnable block"
+    })
+    @Config.Name("Fix Projectile Fire Placing On Burnable Side")
+    @Config.RequiresMcRestart
+    @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patches.projectilesidefire.json")
+    public boolean projectilePlaceFireSide = true;
+
+    @Config.Comment("Fix Block Placing behaviors not using EntityMobGriefingEvent like Vanilla projectiles")
+    @Config.Name("Fix Projectile Block Placing Grief Flag")
+    @Config.RequiresMcRestart
+    @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patches.projectileblockplacegrief.json")
+    public boolean projectilePlaceBlockGrief = true;
+
+    @Config.Comment({
             "Fix Projectiles checking Solid Block Material instead of the more accurate Block State check.",
-            "Allows projectiles to hit targets within the fire or webs they place."
+            "    Allows projectiles to hit targets within the fire or webs they place.",
+            "    An incorrect block impact offset where the position wasn't offset away from the wall."
     })
     @Config.Name("Fix Projectile Non Solid Block Collision")
     @Config.RequiresMcRestart

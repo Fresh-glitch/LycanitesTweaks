@@ -17,12 +17,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(BlockFireBase.class)
-public abstract class BlockFireBaseExtinguishByWorldMixin extends BlockBase {
+public abstract class BlockFireBase_ExtinguishByWorldMixin extends BlockBase {
 
     @Shadow(remap = false)
     protected abstract boolean canNeighborCatchFire(World worldIn, BlockPos pos);
 
-    public BlockFireBaseExtinguishByWorldMixin(Material material, ModInfo group, String name) {
+    public BlockFireBase_ExtinguishByWorldMixin(Material material, ModInfo group, String name) {
         super(material, group, name);
     }
 
@@ -44,7 +44,7 @@ public abstract class BlockFireBaseExtinguishByWorldMixin extends BlockBase {
             at = @At("HEAD")
     )
     public void lycanitesTweaks_lycanitesMobsBlockFireBase_neighborChanged(IBlockState state, World world, BlockPos pos, Block block, BlockPos triggerPos, CallbackInfo ci){
-        if(!world.isRemote) return;
+//        if(!world.isRemote) return;
         try {
             if (!world.getBlockState(pos.down()).isSideSolid(world, pos, EnumFacing.UP) && !this.canNeighborCatchFire(world, pos)) {
                 world.setBlockToAir(pos);
@@ -52,6 +52,7 @@ public abstract class BlockFireBaseExtinguishByWorldMixin extends BlockBase {
         }
         // I Assume this error is why Lycanites commented this exact code out
         // Fix Attempt 1: Don't run on client
+        // Fix Attempt 2: IDK
         catch (NoClassDefFoundError error){
             LycanitesTweaks.LOGGER.error("Caught Exception with Lycanites BlockFireBase on LycanitesTweaks Mixin neighborChanged: {}", error.toString());
         }

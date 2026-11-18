@@ -6,9 +6,12 @@
   "target": "@env(DEFAULT)",
   "minVersion": "0.8",
   "mixins": [
-    "customfirenobreakcollision.BlockFireBaseExtinguishByWorldMixin"
+    "customfirenobreakcollision.BlockFireBase_ExtinguishByWorldMixin"
   ],
   "injectors": {
     "maxShiftBy": 10
-  }
+  },
+  "client": [
+    "customfirenobreakcollision.client.ClientProxy_FireModelMixin"
+  ]
 }

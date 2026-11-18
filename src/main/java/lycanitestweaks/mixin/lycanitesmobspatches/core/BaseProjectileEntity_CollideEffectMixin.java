@@ -10,6 +10,7 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 @Mixin(BaseProjectileEntity.class)
 public abstract class BaseProjectileEntity_CollideEffectMixin extends EntityThrowable {
@@ -24,5 +25,14 @@ public abstract class BaseProjectileEntity_CollideEffectMixin extends EntityThro
     )
     private boolean lycanitesTweaks_lycanitesMobsBaseProjectileEntity_onImpactIsSideSolid(boolean isSolid, RayTraceResult rayTraceResult, @Local(name = "blockPos") BlockPos blockPos, @Local IBlockState blockState){
         return isSolid && !blockState.getBlock().isPassable(this.world, blockPos);
+    }
+
+    @ModifyVariable(
+            method = "onImpact",
+            at = @At(value = "STORE", ordinal = 2),
+            name = "impactPos"
+    )
+    private BlockPos lycanitesTweaks_lycanitesMobsBaseProjectileEntity_onImpactBlockSideHit(BlockPos value, RayTraceResult rayTraceResult){
+        return rayTraceResult.getBlockPos().offset(rayTraceResult.sideHit);
     }
 }

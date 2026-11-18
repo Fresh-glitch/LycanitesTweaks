@@ -331,10 +331,15 @@ public class MinorFeaturesConfig {
             "twilightforest:enchanted_forest"
     };
 
-    @Config.Comment("Fix explosion damage being reduced to 1 when going through lycanites fire (as if it was a full block). Also use vanilla's fire punch-out handling instead of treating the fire as a full block.")
+    @Config.Comment({
+            "Adjusts the handling of Lycanites Fire to be like Vanilla Fire",
+            "    Fix explosion damage being reduced to 1 (as if it was a full block).",
+            "    Uses fire punch-out handling instead of treating the fire as a full block.",
+            "    Registers unused \"block side on fire\" visual variants."
+    })
     @Config.Name("Lycanites Fire Vanilla Like")
     @Config.RequiresMcRestart
-    @MixinConfig.MixinToggle(defaultValue = true, earlyMixin = "mixins.lycanitestweaks.vanillaextinguishmoddedfire.json", lateMixin = "mixins.lycanitestweaks.featurelycanitesfirepassable.json")
+    @MixinConfig.MixinToggle(defaultValue = true, earlyMixin = "mixins.lycanitestweaks.vanilla.extinguishmoddedfire.json", lateMixin = "mixins.lycanitestweaks.feature.lycanitesfirepassable.json")
     public boolean lycanitesFiresNoBreakCollision = true;
 
     @Config.Comment("The Lycanites \"fixate target\" property is not used in vanilla, however LycanitesTweaks uses it to have mini bosses focus on players.\n" +

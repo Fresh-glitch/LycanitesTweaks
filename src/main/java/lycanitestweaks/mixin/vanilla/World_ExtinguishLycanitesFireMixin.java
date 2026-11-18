@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import javax.annotation.Nullable;
 
 @Mixin(World.class)
-public abstract class WorldExtinguishLycanitesFire implements IBlockAccess {
+public abstract class World_ExtinguishLycanitesFireMixin implements IBlockAccess {
 
     @Shadow
     public abstract void playEvent(@Nullable EntityPlayer player, int type, BlockPos pos, int data);

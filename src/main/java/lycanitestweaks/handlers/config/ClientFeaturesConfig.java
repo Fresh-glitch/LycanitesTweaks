@@ -226,4 +226,10 @@ public class ClientFeaturesConfig {
     @Config.Name("Unique Insomnia Message")
     @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.client.insomniamessage.json")
     public boolean insomniaMessage = true;
+
+    @Config.Comment("Reduces the particles that Lycanites Fire Blocks create to match Vanilla Fire.")
+    @Config.Name("Fire Block Particle Reducer")
+    @Config.RequiresMcRestart
+    @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.client.fireparticlereducer.json")
+    public boolean fireBlockParticleReduce = true;
 }
