@@ -483,6 +483,17 @@ public class PatchConfig {
     @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patchespetentrydesync.json")
     public boolean fixClientPetEntryVisual = true;
 
+    @Config.Comment({
+            "Fix pets and mounts vanishing from the beastiary when the player is saved before their pets are loaded",
+            "    (death/respawn, leaving the End, logging out or an autosave right after joining)",
+            "Lycanites required a tick to initialize pet nbt into a savable state",
+            "This will save any pre-initialized nbt instead of discarding them"
+    })
+    @Config.Name("Fix Pets Lost When Saved Before Loading")
+    @Config.RequiresMcRestart
+    @MixinConfig.MixinToggle(defaultValue = true, lateMixin = "mixins.lycanitestweaks.patchespetmanagersavepending.json")
+    public boolean fixPetManagerSavePending = true;
+
     @Config.Comment("Fix Ettin checking for inverted griefing flag")
     @Config.Name("Fix Ettin grief flag")
     @Config.RequiresMcRestart
