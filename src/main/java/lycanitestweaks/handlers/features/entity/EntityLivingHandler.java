@@ -247,9 +247,19 @@ public class EntityLivingHandler {
 
     @SubscribeEvent
     public static void onCreatureJoinWorld(EntityJoinWorldEvent event) {
-        if(event.getWorld().isRemote) return;
         if(!(event.getEntity() instanceof BaseCreatureEntity)) return;
         BaseCreatureEntity creature = (BaseCreatureEntity) event.getEntity();
+
+        // Client needs this too
+        if(ForgeConfigHandler.minorFeaturesConfig.overrideSolidCollision) {
+            for(String creatureName : ForgeConfigHandler.minorFeaturesConfig.solidCollisionMobs) {
+                if(creature.creatureInfo.getName().equals(creatureName)) {
+                    creature.solidCollision = true;
+                    break;
+                }
+            }
+        }
+        if(event.getWorld().isRemote) return;
 
         if(ForgeConfigHandler.mixinPatchesConfig.fixVillagePathfinding) {
             for(String creatureName : ForgeConfigHandler.mixinPatchesConfig.villageNavAIMobs) {
@@ -268,15 +278,6 @@ public class EntityLivingHandler {
                         CreaturePathNavigate creaturePathNavigate = (CreaturePathNavigate)creature.getNavigator();
                         creaturePathNavigate.setCanOpenDoors(true);
                     }
-                    break;
-                }
-            }
-        }
-
-        if(ForgeConfigHandler.minorFeaturesConfig.overrideSolidCollision) {
-            for(String creatureName : ForgeConfigHandler.minorFeaturesConfig.solidCollisionMobs) {
-                if(creature.creatureInfo.getName().equals(creatureName)) {
-                    creature.solidCollision = true;
                     break;
                 }
             }
